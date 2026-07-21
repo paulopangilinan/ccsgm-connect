@@ -1,0 +1,47 @@
+<section class="relative overflow-hidden px-6 pb-20 pt-16 sm:pt-24">
+  <div class="pointer-events-none absolute -top-24 right-[-10%] h-72 w-72 rounded-full bg-accent-400/30 blur-3xl dark:bg-accent-500/20"></div>
+  <div class="pointer-events-none absolute -bottom-24 left-[-10%] h-72 w-72 rounded-full bg-brand-400/30 blur-3xl dark:bg-brand-600/20"></div>
+
+  <div class="relative mx-auto max-w-3xl text-center">
+    <span class="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-4 py-1 text-sm font-semibold text-brand-700 dark:border-brand-800 dark:bg-white/5 dark:text-brand-200">
+      Youth &amp; Young Adults
+    </span>
+
+    <h1 class="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl">
+      Your circle for
+      <span class="bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent">prayer, testimonies</span>
+      &amp; real talk.
+    </h1>
+
+    <p class="mx-auto mt-5 max-w-xl text-lg text-slate-600 dark:text-slate-300">
+      One place to send in a prayer request, share what God's been doing, or reach out for counsel — your elders are listening.
+    </p>
+
+    <div class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <a
+        routerLink="/register"
+        class="w-full rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-8 py-3 text-center font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:scale-[1.02] hover:shadow-xl sm:w-auto"
+      >
+        Join the community
+      </a>
+      <a
+        routerLink="/login"
+        class="w-full rounded-2xl border border-brand-200 px-8 py-3 text-center font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5 sm:w-auto"
+      >
+        I already have an account
+      </a>
+    </div>
+  </div>
+
+  <div class="relative mx-auto mt-20 grid max-w-4xl gap-5 sm:grid-cols-3">
+    @for (item of features; track item.title) {
+      <div class="rounded-3xl border border-brand-100 bg-white/70 p-6 text-left shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-md dark:border-white/10 dark:bg-white/5">
+        <div class="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-lg">
+          {{ item.emoji }}
+        </div>
+        <h3 class="mt-4 font-bold">{{ item.title }}</h3>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ item.description }}</p>
+      </div>
+    }
+  </div>
+</section>
