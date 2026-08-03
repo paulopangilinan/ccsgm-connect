@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "node scripts/ng-with-env.mjs serve",
+    "start": "node scripts/ng-with-env.mjs serve --proxy-config proxy.conf.json",
+    "dev:api": "node scripts/dev-api.mjs",
     "build": "node scripts/ng-with-env.mjs build",
     "watch": "node scripts/ng-with-env.mjs build --watch --configuration development",
     "test": "ng test"

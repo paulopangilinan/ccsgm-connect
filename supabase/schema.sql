@@ -131,6 +131,11 @@ create table submission_responses (
   submission_id uuid not null references submissions(id) on delete cascade,
   responder_id uuid not null references users(id),
   body text not null,
+  -- When true, the member sees "An elder" instead of the responder's name.
+  is_anonymous boolean not null default false,
+  -- Denormalized responder name (null when anonymous). Members can't read an
+  -- elder's users row via RLS, so the name is captured here at reply time.
+  responder_name text,
   created_at timestamptz not null default now()
 );
 

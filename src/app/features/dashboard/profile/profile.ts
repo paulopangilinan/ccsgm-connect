@@ -6,10 +6,11 @@ import { QuestionAnswersService } from '../../../core/questions/question-answers
 import { Question } from '../../../core/questions/question';
 import { Gender } from '../../../core/auth/app-user';
 import { DatePicker } from '../../../shared/date-picker/date-picker';
+import { CameraCapture } from '../../../shared/camera-capture/camera-capture';
 
 @Component({
   selector: 'app-profile',
-  imports: [NgTemplateOutlet, DatePicker],
+  imports: [NgTemplateOutlet, DatePicker, CameraCapture],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
 })
@@ -25,6 +26,7 @@ export class Profile {
 
   protected readonly uploadingAvatar = signal(false);
   protected readonly avatarError = signal<string | null>(null);
+  protected readonly cameraOpen = signal(false);
 
   protected readonly questions = signal<Question[]>([]);
   protected readonly answers = signal<Map<string, unknown>>(new Map());
@@ -71,7 +73,15 @@ export class Profile {
       this.avatarError.set('Image must be 5 MB or smaller.');
       return;
     }
+    await this.uploadAvatar(file);
+  }
 
+  protected async onPhotoCaptured(file: File): Promise<void> {
+    this.cameraOpen.set(false);
+    await this.uploadAvatar(file);
+  }
+
+  private async uploadAvatar(file: File): Promise<void> {
     this.avatarError.set(null);
     this.uploadingAvatar.set(true);
     const { error } = await this.session.uploadAvatar(file);

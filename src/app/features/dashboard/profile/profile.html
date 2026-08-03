@@ -106,18 +106,23 @@
             {{ uploadingAvatar() ? 'Uploading…' : 'Upload photo' }}
             <input type="file" accept="image/*" class="sr-only" [disabled]="uploadingAvatar()" (change)="onAvatarSelected($event)" />
           </label>
-          <label
-            class="cursor-pointer rounded-full border border-brand-200 px-3 py-1.5 text-center text-xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
-            [class.opacity-60]="uploadingAvatar()"
+          <button
+            type="button"
+            [disabled]="uploadingAvatar()"
+            (click)="cameraOpen.set(true)"
+            class="rounded-full border border-brand-200 px-3 py-1.5 text-center text-xs font-semibold text-brand-700 transition hover:bg-brand-50 disabled:opacity-60 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
           >
             Take photo
-            <input type="file" accept="image/*" capture="user" class="sr-only" [disabled]="uploadingAvatar()" (change)="onAvatarSelected($event)" />
-          </label>
+          </button>
         </div>
       </div>
 
       @if (avatarError()) {
         <p role="alert" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{{ avatarError() }}</p>
+      }
+
+      @if (cameraOpen()) {
+        <app-camera-capture (captured)="onPhotoCaptured($event)" (closed)="cameraOpen.set(false)" />
       }
 
       <div>
