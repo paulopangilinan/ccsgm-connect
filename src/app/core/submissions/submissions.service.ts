@@ -87,7 +87,7 @@ export class SubmissionsService {
 
     const { data, error } = await this.supabase
       .from('submission_responses')
-      .select('id, submission_id, body, created_at, responder:users(name)')
+      .select('id, submission_id, body, created_at, responder_name')
       .in('submission_id', submissionIds)
       .order('created_at', { ascending: true });
 
@@ -100,24 +100,31 @@ export class SubmissionsService {
       submissionId: row['submission_id'] as string,
       body: row['body'] as string,
       createdAt: row['created_at'] as string,
-      responderName: this.extractResponderName(row['responder']),
+      // Denormalized on the row (null when the elder replied anonymously).
+      responderName: row['responder_name'] as string | null,
     }));
   }
 
-  private extractResponderName(responder: unknown): string | null {
-    const record = Array.isArray(responder) ? responder[0] : responder;
-    return (record as { name?: string } | null)?.name ?? null;
-  }
-
-  async respond(submissionId: string, body: string): Promise<{ response: SubmissionResponse | null } & ActionResult> {
+  async respond(
+    submissionId: string,
+    body: string,
+    isAnonymous: boolean,
+  ): Promise<{ response: SubmissionResponse | null } & ActionResult> {
     const responderId = this.session.session()?.user.id;
     if (!responderId) {
       return { response: null, error: 'Not signed in' };
     }
 
+    const responderName = isAnonymous ? null : (this.session.profile()?.name ?? null);
     const { data, error } = await this.supabase
       .from('submission_responses')
-      .insert({ submission_id: submissionId, responder_id: responderId, body })
+      .insert({
+        submission_id: submissionId,
+        responder_id: responderId,
+        body,
+        is_anonymous: isAnonymous,
+        responder_name: responderName,
+      })
       .select('id, submission_id, body, created_at')
       .single();
 
@@ -132,8 +139,39 @@ export class SubmissionsService {
         submissionId: data['submission_id'] as string,
         body: data['body'] as string,
         createdAt: data['created_at'] as string,
-        responderName: this.session.profile()?.name ?? null,
+        responderName,
       },
     };
+  }
+
+  // Fire an SMS to the submitter via the server (Semaphore). Returns a soft
+  // result: the reply itself already succeeded, so SMS failure isn't fatal.
+  async sendReplySms(
+    submissionId: string,
+    replyMessage: string,
+    isAnonymous: boolean,
+  ): Promise<{ sent: boolean; error: string | null }> {
+    const token = this.session.session()?.access_token;
+    if (!token) {
+      return { sent: false, error: 'Not signed in' };
+    }
+
+    try {
+      const response = await fetch('/api/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ submissionId, replyMessage, isAnonymous }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { sent?: boolean; reason?: string; error?: string };
+      if (!response.ok) {
+        return { sent: false, error: data.error ?? `SMS failed (${response.status})` };
+      }
+      if (!data.sent) {
+        return { sent: false, error: data.reason === 'no-mobile' ? 'Member has no mobile number on file' : (data.error ?? 'SMS not sent') };
+      }
+      return { sent: true, error: null };
+    } catch {
+      return { sent: false, error: 'Could not reach the SMS service' };
+    }
   }
 }

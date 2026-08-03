@@ -7,8 +7,17 @@
   <nav class="mt-6 flex gap-2 border-b border-brand-100 dark:border-white/10" aria-label="Admin sections">
     <a
       routerLink="members"
-      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
-      class="inline-flex items-center gap-2 rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+      routerLinkActive
+      #membersTab="routerLinkActive"
+      class="inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="membersTab.isActive"
+      [class.font-bold]="membersTab.isActive"
+      [class.text-brand-700]="membersTab.isActive"
+      [class.dark:text-brand-300]="membersTab.isActive"
+      [class.border-transparent]="!membersTab.isActive"
+      [class.font-semibold]="!membersTab.isActive"
+      [class.text-slate-500]="!membersTab.isActive"
+      [class.dark:text-slate-400]="!membersTab.isActive"
     >
       Members
       @if (notifications.pendingCount() > 0) {
@@ -22,15 +31,33 @@
     </a>
     <a
       routerLink="submissions"
-      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
-      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+      routerLinkActive
+      #submissionsTab="routerLinkActive"
+      class="border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="submissionsTab.isActive"
+      [class.font-bold]="submissionsTab.isActive"
+      [class.text-brand-700]="submissionsTab.isActive"
+      [class.dark:text-brand-300]="submissionsTab.isActive"
+      [class.border-transparent]="!submissionsTab.isActive"
+      [class.font-semibold]="!submissionsTab.isActive"
+      [class.text-slate-500]="!submissionsTab.isActive"
+      [class.dark:text-slate-400]="!submissionsTab.isActive"
     >
       Submissions
     </a>
     <a
       routerLink="questions"
-      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
-      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+      routerLinkActive
+      #questionsTab="routerLinkActive"
+      class="border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="questionsTab.isActive"
+      [class.font-bold]="questionsTab.isActive"
+      [class.text-brand-700]="questionsTab.isActive"
+      [class.dark:text-brand-300]="questionsTab.isActive"
+      [class.border-transparent]="!questionsTab.isActive"
+      [class.font-semibold]="!questionsTab.isActive"
+      [class.text-slate-500]="!questionsTab.isActive"
+      [class.dark:text-slate-400]="!questionsTab.isActive"
     >
       Questions
     </a>

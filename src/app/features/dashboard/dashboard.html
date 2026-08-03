@@ -15,22 +15,49 @@
   <nav class="mt-8 flex gap-1 border-b border-brand-100 dark:border-white/10" aria-label="Member sections">
     <a
       routerLink="profile"
-      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
-      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+      routerLinkActive
+      #profileTab="routerLinkActive"
+      class="border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="profileTab.isActive"
+      [class.font-bold]="profileTab.isActive"
+      [class.text-brand-700]="profileTab.isActive"
+      [class.dark:text-brand-300]="profileTab.isActive"
+      [class.border-transparent]="!profileTab.isActive"
+      [class.font-semibold]="!profileTab.isActive"
+      [class.text-slate-500]="!profileTab.isActive"
+      [class.dark:text-slate-400]="!profileTab.isActive"
     >
       Profile
     </a>
     <a
       routerLink="prayers"
-      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
-      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+      routerLinkActive
+      #prayersTab="routerLinkActive"
+      class="border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="prayersTab.isActive"
+      [class.font-bold]="prayersTab.isActive"
+      [class.text-brand-700]="prayersTab.isActive"
+      [class.dark:text-brand-300]="prayersTab.isActive"
+      [class.border-transparent]="!prayersTab.isActive"
+      [class.font-semibold]="!prayersTab.isActive"
+      [class.text-slate-500]="!prayersTab.isActive"
+      [class.dark:text-slate-400]="!prayersTab.isActive"
     >
       Prayer corner
     </a>
     <a
       routerLink="counseling"
-      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
-      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+      routerLinkActive
+      #counselingTab="routerLinkActive"
+      class="border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="counselingTab.isActive"
+      [class.font-bold]="counselingTab.isActive"
+      [class.text-brand-700]="counselingTab.isActive"
+      [class.dark:text-brand-300]="counselingTab.isActive"
+      [class.border-transparent]="!counselingTab.isActive"
+      [class.font-semibold]="!counselingTab.isActive"
+      [class.text-slate-500]="!counselingTab.isActive"
+      [class.dark:text-slate-400]="!counselingTab.isActive"
     >
       Counseling
     </a>

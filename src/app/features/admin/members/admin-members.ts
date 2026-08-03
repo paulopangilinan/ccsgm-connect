@@ -2,15 +2,8 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MembersService } from '../../../core/members/members.service';
 import { NotificationsService } from '../../../core/notifications/notifications.service';
-import { MemberAnswer, MemberSubmission, MemberSummary } from '../../../core/members/member';
-import { SubmissionType } from '../../../core/submissions/submission';
+import { MemberAnswer, MemberSummary } from '../../../core/members/member';
 import { ageFromDob } from '../../../core/util/age';
-
-const SUBMISSION_TYPE_LABELS: Record<SubmissionType, string> = {
-  prayer_request: 'Prayer request',
-  testimony: 'Testimony',
-  counsel_request: 'Counsel request',
-};
 
 @Component({
   selector: 'app-admin-members',
@@ -27,7 +20,6 @@ export class AdminMembers {
   protected readonly expandedId = signal<string | null>(null);
   protected readonly detailLoading = signal(false);
   protected readonly answers = signal<MemberAnswer[]>([]);
-  protected readonly submissions = signal<MemberSubmission[]>([]);
   protected readonly updatingId = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
 
@@ -99,10 +91,6 @@ export class AdminMembers {
     return parts.length ? parts.join(' · ') : 'Profile not completed';
   }
 
-  protected submissionTypeLabel(type: SubmissionType): string {
-    return SUBMISSION_TYPE_LABELS[type];
-  }
-
   protected formatAnswer(answer: MemberAnswer): string {
     if (typeof answer.value === 'boolean') {
       return answer.value ? 'Yes' : 'No';
@@ -121,12 +109,7 @@ export class AdminMembers {
 
     this.expandedId.set(member.id);
     this.detailLoading.set(true);
-    const [answers, submissions] = await Promise.all([
-      this.membersService.listAnswers(member.id),
-      this.membersService.listSubmissions(member.id),
-    ]);
-    this.answers.set(answers);
-    this.submissions.set(submissions);
+    this.answers.set(await this.membersService.listAnswers(member.id));
     this.detailLoading.set(false);
   }
 

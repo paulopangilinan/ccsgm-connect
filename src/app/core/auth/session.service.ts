@@ -57,13 +57,26 @@ export class SessionService {
   async signInWithGoogle(): Promise<AuthResult> {
     const { error } = await this.supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+        // Always show Google's account picker instead of silently reusing the
+        // currently signed-in Google account.
+        queryParams: { prompt: 'select_account' },
+      },
     });
     return { error: error?.message ?? null };
   }
 
   async signOut(): Promise<void> {
-    await this.supabase.auth.signOut();
+    // Local scope clears the client session/storage without a server revoke call,
+    // which can throw on an already-stale token and silently abort sign-out.
+    try {
+      await this.supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // Ignore — we clear local state below regardless.
+    }
+    this.sessionState.set(null);
+    this.profileState.set(null);
   }
 
   async updateProfileBasics(basics: ProfileBasics): Promise<AuthResult> {
