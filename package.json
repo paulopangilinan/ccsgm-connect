@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
+    "start": "node scripts/ng-with-env.mjs serve",
+    "build": "node scripts/ng-with-env.mjs build",
+    "watch": "node scripts/ng-with-env.mjs build --watch --configuration development",
     "test": "ng test"
   },
   "private": true,
@@ -17,6 +17,7 @@
     "@angular/forms": "^22.0.0",
     "@angular/platform-browser": "^22.0.0",
     "@angular/router": "^22.0.0",
+    "@supabase/supabase-js": "^2.110.8",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

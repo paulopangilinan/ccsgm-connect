@@ -1,15 +1,48 @@
+<a
+  href="#main-content"
+  class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-brand-700 focus:shadow-lg dark:focus:bg-surface-dark dark:focus:text-brand-200"
+>
+  Skip to content
+</a>
+
 <div class="min-h-screen bg-gradient-to-b from-brand-50 via-white to-white text-slate-900 dark:from-surface-dark dark:via-surface-dark dark:to-surface-dark dark:text-slate-100">
   <header class="sticky top-0 z-10 border-b border-brand-100/70 bg-white/70 backdrop-blur dark:border-white/5 dark:bg-surface-dark/70">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
       <a routerLink="/" class="flex items-center gap-2 text-lg font-extrabold tracking-tight text-brand-700 dark:text-brand-200">
-        <span class="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-sm text-white">C</span>
+        <img ngSrc="images/ccsgm-logo.png" width="90" height="90" priority alt="" class="h-8 w-8 rounded-full" />
         CCSGM Connect
       </a>
-      <app-theme-toggle />
+      <div class="flex items-center gap-3">
+        @if (session.isAuthenticated()) {
+          @if (session.profile()?.avatarUrl) {
+            <img
+              [src]="session.profile()!.avatarUrl"
+              [alt]="session.profile()?.name ?? 'Your profile photo'"
+              referrerpolicy="no-referrer"
+              class="h-8 w-8 rounded-full border border-brand-100 object-cover dark:border-white/10"
+            />
+          } @else {
+            <span
+              class="grid h-8 w-8 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
+              aria-hidden="true"
+            >
+              {{ (session.profile()?.name ?? '?')[0] }}
+            </span>
+          }
+          <button
+            type="button"
+            (click)="signOut()"
+            class="rounded-full border border-brand-200 px-4 py-1.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+          >
+            Sign out
+          </button>
+        }
+        <app-theme-toggle />
+      </div>
     </div>
   </header>
 
-  <main>
+  <main id="main-content">
     <router-outlet />
   </main>
 </div>

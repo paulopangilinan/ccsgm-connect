@@ -1,0 +1,80 @@
+@if (errorMessage()) {
+  <p role="alert" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+    {{ errorMessage() }}
+  </p>
+}
+
+<div class="mt-6 flex flex-wrap gap-2" role="group" aria-label="Filter submissions by type">
+  @for (option of filters; track option.value) {
+    <button
+      type="button"
+      [attr.aria-pressed]="filter() === option.value"
+      (click)="setFilter(option.value)"
+      class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
+      [class.border-brand-500]="filter() === option.value"
+      [class.bg-brand-500]="filter() === option.value"
+      [class.text-white]="filter() === option.value"
+      [class.border-brand-200]="filter() !== option.value"
+      [class.text-brand-700]="filter() !== option.value"
+      [class.dark:border-white/10]="filter() !== option.value"
+      [class.dark:text-brand-200]="filter() !== option.value"
+    >
+      {{ option.label }}
+    </button>
+  }
+</div>
+
+@if (loading()) {
+  <p class="mt-8 text-sm text-slate-500 dark:text-slate-400">Loading submissions…</p>
+} @else if (filtered().length === 0) {
+  <p class="mt-8 text-sm text-slate-500 dark:text-slate-400">Nothing here yet.</p>
+} @else {
+  <ul class="mt-8 space-y-5">
+    @for (submission of filtered(); track submission.id) {
+      <li class="rounded-3xl border border-brand-100 bg-white/70 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+        <div class="flex items-center justify-between gap-3 text-sm">
+          <span class="rounded-full bg-brand-50 px-3 py-1 font-semibold text-brand-700 dark:bg-white/5 dark:text-brand-200">
+            {{ typeLabel(submission.type) }}
+          </span>
+          <span class="text-slate-500 dark:text-slate-400">{{ submission.createdAt | date: 'medium' }}</span>
+        </div>
+
+        <p class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {{ submission.submittedBy ?? 'Anonymous' }}
+        </p>
+        <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">{{ submission.body }}</p>
+
+        @if (responsesFor(submission.id).length > 0) {
+          <ul class="mt-4 space-y-3 border-t border-brand-100 pt-4 dark:border-white/10">
+            @for (response of responsesFor(submission.id); track response.id) {
+              <li class="rounded-2xl bg-brand-50/60 px-4 py-3 text-sm dark:bg-white/5">
+                <p class="font-semibold text-brand-700 dark:text-brand-200">{{ response.responderName ?? 'An elder' }}</p>
+                <p class="mt-1 whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ response.body }}</p>
+              </li>
+            }
+          </ul>
+        }
+
+        <div class="mt-4">
+          <label [attr.for]="'reply-' + submission.id" class="sr-only">Reply to this submission</label>
+          <textarea
+            [id]="'reply-' + submission.id"
+            rows="2"
+            placeholder="Write a reply…"
+            [value]="draftFor(submission.id)"
+            (input)="setDraft(submission.id, $any($event.target).value)"
+            class="w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+          ></textarea>
+          <button
+            type="button"
+            [disabled]="!draftFor(submission.id).trim() || sendingId() === submission.id"
+            (click)="sendReply(submission.id)"
+            class="mt-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+          >
+            {{ sendingId() === submission.id ? 'Sending…' : 'Send reply' }}
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+}

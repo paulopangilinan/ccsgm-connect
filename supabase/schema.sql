@@ -20,16 +20,22 @@ create table groups (
 );
 
 -- ─── Users ───────────────────────────────────────────────────────────
--- 1:1 profile row per auth.users entry (Supabase Auth: Facebook OAuth + email/password).
+-- 1:1 profile row per auth.users entry (Supabase Auth: Google OAuth + email/password).
 
 create table users (
   id uuid primary key references auth.users(id) on delete cascade,
   branch_id uuid references branches(id),
   group_id uuid references groups(id),
   name text not null,
-  age int,
+  date_of_birth date,
+  gender text check (gender in ('male', 'female')),
+  church text not null default 'CCSGM Kawit', -- single church at launch; catalog comes later
+  city_address text,
+  mobile text,
   avatar_url text,
   role text not null default 'member' check (role in ('member', 'elder')),
+  -- New members await elder approval; elders are treated as always-approved in app code.
+  membership_status text not null default 'pending' check (membership_status in ('pending', 'approved', 'rejected')),
   theme_preference text not null default 'system' check (theme_preference in ('light', 'dark', 'system')),
 
   -- Derived from the system-linked questionnaire questions (see `questions.system_key`).
@@ -64,15 +70,51 @@ create table questions (
 create table question_answers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
-  question_id uuid not null references questions(id) on delete cascade,
+  -- Nullable + set null (not cascade): a deleted question must not erase the
+  -- member's answer to it. The answer stays, carrying its own question_snapshot.
+  question_id uuid references questions(id) on delete set null,
   answer_value jsonb not null,
+  -- Copy of the question (label/field_type/options) as it was when answered, so
+  -- viewing an old answer shows the question the member actually saw, even after
+  -- an elder edits or deletes it. { "label", "field_type", "options" }.
+  question_snapshot jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, question_id)
 );
 
--- ─── Submissions (prayer requests / testimonies / counsel) ─────────
--- Unified table, ongoing/repeatable — not one-time-at-registration.
+-- System-linked question tree for IDAF/CEF (see users.is_idaf_leader etc. above).
+do $$
+declare
+  idaf_question_id uuid;
+  cef_question_id uuid;
+begin
+  insert into questions (type, system_key, label, field_type, order_index)
+  values ('system_linked', 'idaf_status', 'Do you have IDAF?', 'toggle', 10)
+  returning id into idaf_question_id;
+
+  insert into questions (type, system_key, label, field_type, parent_question_id, trigger_value, order_index)
+  values ('system_linked', 'wants_idaf', 'I want to join an IDAF', 'toggle', idaf_question_id, 'false', 11);
+
+  insert into questions (type, system_key, label, field_type, options, order_index)
+  values (
+    'system_linked',
+    'cef_sector',
+    'Which CEF Sector are you part of?',
+    'select',
+    '["Sector 1", "Sector 2", "Sector 3", "Sector 4", "Sector 5", "None yet"]'::jsonb,
+    20
+  )
+  returning id into cef_question_id;
+
+  insert into questions (type, system_key, label, field_type, parent_question_id, trigger_value, order_index)
+  values ('system_linked', 'wants_cef', 'I want to join CEF', 'toggle', cef_question_id, 'None yet', 21);
+end $$;
+
+-- ─── Submissions (prayer requests / counsel) ───────────────────────
+-- Ongoing/repeatable. Testimonies used to live here too but now have their
+-- own table (see below); the 'testimony' type is kept for legacy rows.
+-- is_answered only applies to prayer_request rows.
 
 create table submissions (
   id uuid primary key default gen_random_uuid(),
@@ -80,6 +122,7 @@ create table submissions (
   type text not null check (type in ('prayer_request', 'testimony', 'counsel_request')),
   body text not null,
   is_anonymous boolean not null default false,
+  is_answered boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -88,6 +131,28 @@ create table submission_responses (
   submission_id uuid not null references submissions(id) on delete cascade,
   responder_id uuid not null references users(id),
   body text not null,
+  created_at timestamptz not null default now()
+);
+
+-- ─── Testimonies ────────────────────────────────────────────────────
+-- Standalone, or tied to a prayer that was answered. Can carry images and be
+-- shared to the public CCSGM website (integration later). When anonymous, the
+-- displayed author becomes "A {age} years old {brother/sister} from {church}".
+
+create table testimonies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  linked_prayer_id uuid references submissions(id) on delete set null,
+  body text not null,
+  is_anonymous boolean not null default false,
+  share_to_website boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table testimony_media (
+  id uuid primary key default gen_random_uuid(),
+  testimony_id uuid not null references testimonies(id) on delete cascade,
+  url text not null,
   created_at timestamptz not null default now()
 );
 
@@ -117,6 +182,31 @@ as $$
   );
 $$;
 
+-- Blocks self-escalation: the "users update own row" policy lets members edit
+-- their own row, but has no column restriction, so without this a member
+-- could set their own role to 'elder' and pass straight through is_elder().
+-- auth.uid() is only non-null for requests made through the app's own API
+-- (PostgREST/GoTrue set the JWT claims); a direct DB session (Supabase SQL
+-- editor, migrations) has no JWT and auth.uid() is null, so this only
+-- restricts the app itself, not project-owner bootstrapping of the first elder.
+create function protect_user_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role and auth.uid() is not null and not is_elder() then
+    raise exception 'Only elders can change user roles';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger users_protect_role
+  before update on users
+  for each row execute function protect_user_role();
+
 alter table branches enable row level security;
 alter table groups enable row level security;
 alter table users enable row level security;
@@ -124,6 +214,8 @@ alter table questions enable row level security;
 alter table question_answers enable row level security;
 alter table submissions enable row level security;
 alter table submission_responses enable row level security;
+alter table testimonies enable row level security;
+alter table testimony_media enable row level security;
 alter table content_snippets enable row level security;
 
 create policy "branches readable by authenticated" on branches
@@ -137,6 +229,11 @@ create policy "users read own row" on users
 
 create policy "users update own row" on users
   for update using (id = auth.uid());
+
+-- Elders can update any user row (e.g. approve/reject membership). The
+-- protect_user_role trigger still guards role changes separately.
+create policy "users manageable by elders" on users
+  for update using (is_elder()) with check (is_elder());
 
 create policy "users insert own row" on users
   for insert with check (id = auth.uid());
@@ -162,6 +259,10 @@ create policy "submissions owned by user" on submissions
 create policy "submissions written by owner" on submissions
   for insert with check (user_id = auth.uid());
 
+-- Lets a member mark their own prayer as answered.
+create policy "submissions updated by owner" on submissions
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 create policy "responses readable by submitter and elders" on submission_responses
   for select using (
     is_elder()
@@ -171,6 +272,29 @@ create policy "responses readable by submitter and elders" on submission_respons
 create policy "responses written by elders" on submission_responses
   for insert with check (is_elder());
 
+create policy "testimonies readable by owner and elders" on testimonies
+  for select using (user_id = auth.uid() or is_elder());
+
+create policy "testimonies written by owner" on testimonies
+  for insert with check (user_id = auth.uid());
+
+create policy "testimonies updated by owner" on testimonies
+  for update using (user_id = auth.uid());
+
+create policy "testimonies deleted by owner" on testimonies
+  for delete using (user_id = auth.uid());
+
+create policy "testimony media readable by owner and elders" on testimony_media
+  for select using (
+    is_elder()
+    or exists (select 1 from testimonies t where t.id = testimony_id and t.user_id = auth.uid())
+  );
+
+create policy "testimony media written by owner" on testimony_media
+  for insert with check (
+    exists (select 1 from testimonies t where t.id = testimony_id and t.user_id = auth.uid())
+  );
+
 create policy "content snippets readable by authenticated" on content_snippets
   for select to authenticated using (true);
 
@@ -178,8 +302,14 @@ create policy "content snippets managed by elders" on content_snippets
   for all using (is_elder()) with check (is_elder());
 
 -- ─── Admin view: hides identity on anonymous submissions ────────────
+-- security_invoker is required: without it, views run as their owner (the
+-- Supabase SQL-editor role, which bypasses RLS), so ANY authenticated user
+-- could read every submission through this view regardless of the
+-- "submissions owned by user" policy on the underlying table.
 
-create view submissions_admin as
+create view submissions_admin
+with (security_invoker = true)
+as
 select
   s.id,
   s.type,
@@ -190,3 +320,11 @@ select
   case when s.is_anonymous then null else u.avatar_url end as submitted_by_avatar
 from submissions s
 join users u on u.id = s.user_id;
+
+-- ─── Realtime ────────────────────────────────────────────────────────
+-- Event-driven updates to elders: the admin UI subscribes to these tables via
+-- Supabase Realtime. RLS still applies, so elders only receive rows they may read.
+
+alter publication supabase_realtime add table users;
+alter publication supabase_realtime add table submissions;
+alter publication supabase_realtime add table testimonies;

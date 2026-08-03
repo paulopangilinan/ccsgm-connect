@@ -1,10 +1,10 @@
-import { Injectable, effect, signal } from '@angular/core';
+import { Service, effect, signal } from '@angular/core';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
 const STORAGE_KEY = 'ccsgm-theme';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ThemeService {
   private readonly media = window.matchMedia('(prefers-color-scheme: dark)');
 

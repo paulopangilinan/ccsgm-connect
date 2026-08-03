@@ -1,0 +1,190 @@
+@if (errorMessage()) {
+  <p role="alert" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+    {{ errorMessage() }}
+  </p>
+}
+
+<div class="mt-6 rounded-3xl border border-brand-100 bg-white/70 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+  <h2 class="text-lg font-bold">{{ editingId() ? 'Edit question' : 'Add a question' }}</h2>
+
+  <div class="mt-4 space-y-4">
+    <div>
+      <label for="question-label" class="text-sm font-semibold">Label</label>
+      <input
+        id="question-label"
+        type="text"
+        [value]="label()"
+        (input)="label.set($any($event.target).value)"
+        class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+      />
+    </div>
+
+    <div>
+      <label for="question-field-type" class="text-sm font-semibold">Answer type</label>
+      <select
+        id="question-field-type"
+        [value]="fieldType()"
+        (change)="fieldType.set($any($event.target).value)"
+        class="field-select mt-1 w-full rounded-xl border border-brand-200 bg-white py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+      >
+        @for (option of fieldTypes; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (fieldType() === 'select') {
+      <div>
+        <label for="question-options" class="text-sm font-semibold">Options (one per line)</label>
+        <textarea
+          id="question-options"
+          rows="4"
+          [value]="optionsText()"
+          (input)="optionsText.set($any($event.target).value)"
+          class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+        ></textarea>
+      </div>
+    }
+
+    <div>
+      <label for="question-parent" class="text-sm font-semibold">Follow-up to (optional)</label>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Only show this question after a specific answer to a Yes/No or multiple-choice question.
+      </p>
+      <select
+        id="question-parent"
+        [value]="parentQuestionId() ?? ''"
+        (change)="setParent($any($event.target).value)"
+        class="field-select mt-1 w-full rounded-xl border border-brand-200 bg-white py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+      >
+        <option value="">None — show to everyone</option>
+        @for (candidate of parentCandidates(); track candidate.id) {
+          <option [value]="candidate.id">{{ candidate.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (selectedParent()) {
+      <div>
+        <label for="question-trigger" class="text-sm font-semibold">Show this when the answer is</label>
+        <select
+          id="question-trigger"
+          [value]="triggerValue() ?? ''"
+          (change)="triggerValue.set($any($event.target).value || null)"
+          class="field-select mt-1 w-full rounded-xl border border-brand-200 bg-white py-2 pl-4 pr-10 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+        >
+          <option value="" disabled>Choose an answer…</option>
+          @for (option of triggerOptions(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div class="flex gap-2">
+      <button
+        type="button"
+        [disabled]="!label().trim() || saving()"
+        (click)="save()"
+        class="rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+      >
+        {{ saving() ? 'Saving…' : editingId() ? 'Save changes' : 'Add question' }}
+      </button>
+      @if (editingId()) {
+        <button
+          type="button"
+          (click)="cancelEdit()"
+          class="rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+        >
+          Cancel
+        </button>
+      }
+    </div>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="mt-8 text-sm text-slate-500 dark:text-slate-400">Loading questions…</p>
+} @else if (questions().length === 0) {
+  <p class="mt-8 text-sm text-slate-500 dark:text-slate-400">No questions yet.</p>
+} @else {
+  <ul class="mt-8 space-y-3">
+    @for (question of questions(); track question.id; let first = $first; let last = $last) {
+      <li
+        class="flex items-center gap-3 rounded-2xl border border-brand-100 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5"
+        [class.ml-8]="question.parentQuestionId"
+      >
+        <div class="flex flex-col gap-1">
+          <button
+            type="button"
+            [disabled]="first"
+            (click)="move(question, 'up')"
+            aria-label="Move up"
+            class="rounded-lg border border-brand-200 px-2 py-0.5 text-xs text-brand-700 disabled:opacity-30 dark:border-white/10 dark:text-brand-200"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            [disabled]="last"
+            (click)="move(question, 'down')"
+            aria-label="Move down"
+            class="rounded-lg border border-brand-200 px-2 py-0.5 text-xs text-brand-700 disabled:opacity-30 dark:border-white/10 dark:text-brand-200"
+          >
+            ↓
+          </button>
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700 dark:bg-white/5 dark:text-brand-200">
+              {{ fieldTypeLabel(question.fieldType) }}
+            </span>
+            @if (question.type === 'system_linked') {
+              <span class="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                System-linked
+              </span>
+            }
+            @if (!question.active) {
+              <span class="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                Inactive
+              </span>
+            }
+          </div>
+          <p class="mt-1 truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{{ question.label }}</p>
+          @if (question.parentQuestionId) {
+            <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+              Shown when “{{ parentLabel(question.parentQuestionId) }}” = {{ triggerLabel(question) }}
+            </p>
+          }
+        </div>
+
+        <div class="flex shrink-0 gap-2">
+          <button
+            type="button"
+            (click)="toggleActive(question)"
+            class="rounded-xl border border-brand-200 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+          >
+            {{ question.active ? 'Deactivate' : 'Activate' }}
+          </button>
+          <button
+            type="button"
+            (click)="startEdit(question)"
+            class="rounded-xl border border-brand-200 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            [disabled]="question.type === 'system_linked'"
+            [attr.title]="question.type === 'system_linked' ? 'System-linked questions can\'t be deleted' : null"
+            (click)="remove(question)"
+            class="rounded-xl border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-30 dark:border-red-500/20 dark:text-red-400 dark:hover:bg-red-500/10"
+          >
+            Delete
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+}

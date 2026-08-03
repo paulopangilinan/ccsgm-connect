@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { SessionService } from '../../core/auth/session.service';
 
 @Component({
   selector: 'app-landing',
@@ -8,6 +9,23 @@ import { RouterLink } from '@angular/router';
   styleUrl: './landing.css',
 })
 export class Landing {
+  private readonly session = inject(SessionService);
+  private readonly router = inject(Router);
+
+  constructor() {
+    // Signed-in users' home is their own area, not the marketing page.
+    void this.redirectIfAuthenticated();
+  }
+
+  private async redirectIfAuthenticated(): Promise<void> {
+    await this.session.whenReady();
+    if (this.session.isElder()) {
+      await this.router.navigateByUrl('/admin');
+    } else if (this.session.isAuthenticated()) {
+      await this.router.navigateByUrl('/dashboard');
+    }
+  }
+
   protected readonly features = [
     {
       emoji: '🙏',

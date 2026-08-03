@@ -1,8 +1,106 @@
 <section class="mx-auto max-w-md px-6 py-20">
   <div class="rounded-3xl border border-brand-100 bg-white/70 p-8 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
     <h1 class="text-2xl font-extrabold">Create your account</h1>
-    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-      Invite-only for now — registration form coming next.
-    </p>
+    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Join your circle for prayer, testimonies &amp; real talk.</p>
+
+    @if (needsEmailConfirmation()) {
+      <p role="status" class="mt-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-700 dark:bg-white/5 dark:text-brand-200">
+        Check your email to confirm your account before signing in.
+      </p>
+    } @else {
+      @if (formError()) {
+        <p role="alert" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+          {{ formError() }}
+        </p>
+      }
+
+      <form novalidate class="mt-6 space-y-4" (submit)="$event.preventDefault(); submitRegister()">
+        <div>
+          <label for="register-name" class="text-sm font-semibold">Name</label>
+          <input
+            id="register-name"
+            type="text"
+            autocomplete="name"
+            [formField]="registerForm.name"
+            [attr.aria-invalid]="registerForm.name().touched() && registerForm.name().invalid() ? true : null"
+            [attr.aria-describedby]="registerForm.name().touched() && registerForm.name().invalid() ? 'register-name-error' : null"
+            class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+          />
+          @if (registerForm.name().touched() && registerForm.name().invalid()) {
+            <p id="register-name-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ registerForm.name().errors()[0]?.message }}
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="register-email" class="text-sm font-semibold">Email</label>
+          <input
+            id="register-email"
+            type="email"
+            autocomplete="email"
+            [formField]="registerForm.email"
+            [attr.aria-invalid]="registerForm.email().touched() && registerForm.email().invalid() ? true : null"
+            [attr.aria-describedby]="registerForm.email().touched() && registerForm.email().invalid() ? 'register-email-error' : null"
+            class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+          />
+          @if (registerForm.email().touched() && registerForm.email().invalid()) {
+            <p id="register-email-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ registerForm.email().errors()[0]?.message }}
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="register-password" class="text-sm font-semibold">Password</label>
+          <input
+            id="register-password"
+            type="password"
+            autocomplete="new-password"
+            [formField]="registerForm.password"
+            [attr.aria-invalid]="registerForm.password().touched() && registerForm.password().invalid() ? true : null"
+            [attr.aria-describedby]="registerForm.password().touched() && registerForm.password().invalid() ? 'register-password-error' : null"
+            class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+          />
+          @if (registerForm.password().touched() && registerForm.password().invalid()) {
+            <p id="register-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ registerForm.password().errors()[0]?.message }}
+            </p>
+          }
+        </div>
+
+        <div>
+          <label for="register-confirm-password" class="text-sm font-semibold">Confirm password</label>
+          <input
+            id="register-confirm-password"
+            type="password"
+            autocomplete="new-password"
+            [formField]="registerForm.confirmPassword"
+            [attr.aria-invalid]="registerForm.confirmPassword().touched() && registerForm.confirmPassword().invalid() ? true : null"
+            [attr.aria-describedby]="registerForm.confirmPassword().touched() && registerForm.confirmPassword().invalid() ? 'register-confirm-password-error' : null"
+            class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+          />
+          @if (registerForm.confirmPassword().touched() && registerForm.confirmPassword().invalid()) {
+            <p id="register-confirm-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ registerForm.confirmPassword().errors()[0]?.message }}
+            </p>
+          }
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="submitting()"
+          [attr.aria-busy]="submitting() ? true : null"
+          class="w-full rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-3 font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:scale-[1.02] hover:shadow-xl disabled:opacity-60 disabled:hover:scale-100"
+        >
+          {{ submitting() ? 'Creating account…' : 'Create account' }}
+        </button>
+      </form>
+
+      <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-300">
+        Already have an account?
+        <a routerLink="/login" class="font-semibold text-brand-700 dark:text-brand-200">Sign in</a>
+      </p>
+    }
   </div>
 </section>

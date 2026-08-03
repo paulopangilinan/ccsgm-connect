@@ -1,6 +1,40 @@
-<section class="mx-auto max-w-4xl px-6 py-16">
-  <h1 class="text-2xl font-extrabold">Your dashboard</h1>
-  <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-    Quick actions and your submission history land here.
-  </p>
+<section class="mx-auto max-w-2xl px-6 py-16">
+  <h1 class="text-2xl font-extrabold">Welcome{{ session.profile()?.name ? ', ' + session.profile()?.name : '' }}</h1>
+
+  @if (session.profile()?.membershipStatus === 'pending') {
+    <p class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+      Your membership is awaiting approval from an elder. You can complete your profile in the meantime.
+    </p>
+  } @else if (session.profile()?.membershipStatus === 'rejected') {
+    <p class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+      Your membership request wasn't approved. Please reach out to an elder.
+    </p>
+  }
+
+  <!-- Tabs -->
+  <nav class="mt-8 flex gap-1 border-b border-brand-100 dark:border-white/10" aria-label="Member sections">
+    <a
+      routerLink="profile"
+      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
+      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+    >
+      Profile
+    </a>
+    <a
+      routerLink="prayers"
+      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
+      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+    >
+      Prayer corner
+    </a>
+    <a
+      routerLink="counseling"
+      routerLinkActive="border-brand-600 bg-brand-50 font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200"
+      class="rounded-t-lg border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
+    >
+      Counseling
+    </a>
+  </nav>
+
+  <router-outlet />
 </section>

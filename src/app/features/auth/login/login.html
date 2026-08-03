@@ -1,8 +1,78 @@
 <section class="mx-auto max-w-md px-6 py-20">
   <div class="rounded-3xl border border-brand-100 bg-white/70 p-8 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
     <h1 class="text-2xl font-extrabold">Welcome back</h1>
-    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-      Facebook login + email/password coming next.
+    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Sign in to reach your circle.</p>
+
+    @if (formError()) {
+      <p role="alert" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+        {{ formError() }}
+      </p>
+    }
+
+    <form novalidate class="mt-6 space-y-4" (submit)="$event.preventDefault(); submitLogin()">
+      <div>
+        <label for="login-email" class="text-sm font-semibold">Email</label>
+        <input
+          id="login-email"
+          type="email"
+          autocomplete="email"
+          [formField]="loginForm.email"
+          [attr.aria-invalid]="loginForm.email().touched() && loginForm.email().invalid() ? true : null"
+          [attr.aria-describedby]="loginForm.email().touched() && loginForm.email().invalid() ? 'login-email-error' : null"
+          class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+        />
+        @if (loginForm.email().touched() && loginForm.email().invalid()) {
+          <p id="login-email-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ loginForm.email().errors()[0]?.message }}
+          </p>
+        }
+      </div>
+
+      <div>
+        <label for="login-password" class="text-sm font-semibold">Password</label>
+        <input
+          id="login-password"
+          type="password"
+          autocomplete="current-password"
+          [formField]="loginForm.password"
+          [attr.aria-invalid]="loginForm.password().touched() && loginForm.password().invalid() ? true : null"
+          [attr.aria-describedby]="loginForm.password().touched() && loginForm.password().invalid() ? 'login-password-error' : null"
+          class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+        />
+        @if (loginForm.password().touched() && loginForm.password().invalid()) {
+          <p id="login-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ loginForm.password().errors()[0]?.message }}
+          </p>
+        }
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="submitting()"
+        [attr.aria-busy]="submitting() ? true : null"
+        class="w-full rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-6 py-3 font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:scale-[1.02] hover:shadow-xl disabled:opacity-60 disabled:hover:scale-100"
+      >
+        {{ submitting() ? 'Signing in…' : 'Sign in' }}
+      </button>
+    </form>
+
+    <div class="mt-4 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <span class="h-px flex-1 bg-brand-100 dark:bg-white/10"></span>
+      or
+      <span class="h-px flex-1 bg-brand-100 dark:bg-white/10"></span>
+    </div>
+
+    <button
+      type="button"
+      (click)="continueWithGoogle()"
+      class="mt-4 w-full rounded-2xl border border-brand-200 px-6 py-3 text-center font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+    >
+      Continue with Google
+    </button>
+
+    <p class="mt-6 text-center text-sm text-slate-600 dark:text-slate-300">
+      New here?
+      <a routerLink="/register" class="font-semibold text-brand-700 dark:text-brand-200">Create an account</a>
     </p>
   </div>
 </section>
