@@ -133,9 +133,10 @@ create table submission_responses (
   body text not null,
   -- When true, the member sees "An elder" instead of the responder's name.
   is_anonymous boolean not null default false,
-  -- Denormalized responder name (null when anonymous). Members can't read an
-  -- elder's users row via RLS, so the name is captured here at reply time.
+  -- Denormalized responder name/avatar (null when anonymous). Members can't
+  -- read an elder's users row via RLS, so both are captured at reply time.
   responder_name text,
+  responder_avatar_url text,
   created_at timestamptz not null default now()
 );
 
@@ -151,6 +152,18 @@ create table testimonies (
   body text not null,
   is_anonymous boolean not null default false,
   share_to_website boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- ─── Birthday greetings ─────────────────────────────────────────────
+-- A "greet via profile" record: shows up on the recipient's own profile for
+-- a few days. Email/SMS greetings don't need a row -- they're sent directly.
+
+create table birthday_greetings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  from_name text not null,
+  message text not null,
   created_at timestamptz not null default now()
 );
 
@@ -221,6 +234,7 @@ alter table submissions enable row level security;
 alter table submission_responses enable row level security;
 alter table testimonies enable row level security;
 alter table testimony_media enable row level security;
+alter table birthday_greetings enable row level security;
 alter table content_snippets enable row level security;
 
 create policy "branches readable by authenticated" on branches
@@ -299,6 +313,12 @@ create policy "testimony media written by owner" on testimony_media
   for insert with check (
     exists (select 1 from testimonies t where t.id = testimony_id and t.user_id = auth.uid())
   );
+
+create policy "greetings readable by owner" on birthday_greetings
+  for select using (user_id = auth.uid());
+
+create policy "greetings written by elders" on birthday_greetings
+  for insert with check (is_elder());
 
 create policy "content snippets readable by authenticated" on content_snippets
   for select to authenticated using (true);

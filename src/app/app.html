@@ -13,6 +13,34 @@
         CCSGM Connect
       </a>
       <div class="flex items-center gap-3">
+        @if (session.isElder()) {
+          <label
+            class="group relative h-8 w-8 shrink-0 cursor-pointer rounded-full"
+            [class.opacity-60]="uploadingAvatar()"
+            [attr.aria-label]="session.profile()?.avatarUrl ? 'Change your photo' : 'Add your photo'"
+            [title]="session.profile()?.avatarUrl ? 'Change your photo' : 'Add your photo'"
+          >
+            @if (session.profile()?.avatarUrl) {
+              <img
+                [src]="session.profile()!.avatarUrl"
+                [alt]="session.profile()?.name ?? 'Your profile photo'"
+                referrerpolicy="no-referrer"
+                class="h-8 w-8 rounded-full border border-brand-100 object-cover dark:border-white/10"
+              />
+            } @else {
+              <span
+                class="grid h-8 w-8 place-items-center rounded-full border border-dashed border-brand-300 bg-brand-50 text-brand-500 dark:border-white/20 dark:bg-white/5 dark:text-brand-300"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </span>
+            }
+            <input type="file" accept="image/*" class="sr-only" [disabled]="uploadingAvatar()" (change)="onElderAvatarSelected($event)" />
+          </label>
+        }
         @if (session.isAuthenticated()) {
           <button
             type="button"
@@ -37,3 +65,5 @@
     <router-outlet />
   </main>
 </div>
+
+<app-toast [message]="notice.message()" [tone]="notice.tone()" (dismissed)="notice.clear()" />

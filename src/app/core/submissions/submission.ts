@@ -14,6 +14,7 @@ export interface SubmissionResponse {
   id: string;
   submissionId: string;
   responderName: string | null;
+  responderAvatarUrl: string | null;
   body: string;
   createdAt: string;
 }

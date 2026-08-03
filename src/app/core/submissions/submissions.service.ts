@@ -18,11 +18,34 @@ export class SubmissionsService {
       return { error: 'Not signed in' };
     }
 
-    const { error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('submissions')
-      .insert({ user_id: userId, type, body, is_anonymous: isAnonymous });
+      .insert({ user_id: userId, type, body, is_anonymous: isAnonymous })
+      .select('id')
+      .single();
+
+    if (!error && data && (type === 'prayer_request' || type === 'counsel_request')) {
+      // Fire-and-forget: elders get emailed, but this never blocks or fails the submission itself.
+      void this.notifyNewSubmission(data['id'] as string);
+    }
 
     return { error: error?.message ?? null };
+  }
+
+  private async notifyNewSubmission(submissionId: string): Promise<void> {
+    const token = this.session.session()?.access_token;
+    if (!token) {
+      return;
+    }
+    try {
+      await fetch('/api/notify-new-submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ submissionId }),
+      });
+    } catch {
+      // Non-fatal -- the submission already succeeded.
+    }
   }
 
   async listMine(): Promise<MySubmission[]> {
@@ -87,7 +110,7 @@ export class SubmissionsService {
 
     const { data, error } = await this.supabase
       .from('submission_responses')
-      .select('id, submission_id, body, created_at, responder_name')
+      .select('id, submission_id, body, created_at, responder_name, responder_avatar_url')
       .in('submission_id', submissionIds)
       .order('created_at', { ascending: true });
 
@@ -102,6 +125,7 @@ export class SubmissionsService {
       createdAt: row['created_at'] as string,
       // Denormalized on the row (null when the elder replied anonymously).
       responderName: row['responder_name'] as string | null,
+      responderAvatarUrl: row['responder_avatar_url'] as string | null,
     }));
   }
 
@@ -115,7 +139,9 @@ export class SubmissionsService {
       return { response: null, error: 'Not signed in' };
     }
 
-    const responderName = isAnonymous ? null : (this.session.profile()?.name ?? null);
+    const profile = this.session.profile();
+    const responderName = isAnonymous ? null : (profile?.name ?? null);
+    const responderAvatarUrl = isAnonymous ? null : (profile?.avatarUrl ?? null);
     const { data, error } = await this.supabase
       .from('submission_responses')
       .insert({
@@ -124,6 +150,7 @@ export class SubmissionsService {
         body,
         is_anonymous: isAnonymous,
         responder_name: responderName,
+        responder_avatar_url: responderAvatarUrl,
       })
       .select('id, submission_id, body, created_at')
       .single();
@@ -131,6 +158,9 @@ export class SubmissionsService {
     if (error || !data) {
       return { response: null, error: error?.message ?? 'Failed to send reply' };
     }
+
+    // Fire-and-forget: the member gets emailed, but this never blocks or fails the reply itself.
+    void this.notifyReply(submissionId, isAnonymous);
 
     return {
       error: null,
@@ -140,8 +170,25 @@ export class SubmissionsService {
         body: data['body'] as string,
         createdAt: data['created_at'] as string,
         responderName,
+        responderAvatarUrl,
       },
     };
+  }
+
+  private async notifyReply(submissionId: string, isAnonymous: boolean): Promise<void> {
+    const token = this.session.session()?.access_token;
+    if (!token) {
+      return;
+    }
+    try {
+      await fetch('/api/reply-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ submissionId, isAnonymous }),
+      });
+    } catch {
+      // Non-fatal -- the reply already succeeded.
+    }
   }
 
   // Fire an SMS to the submitter via the server (Semaphore). Returns a soft

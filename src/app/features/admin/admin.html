@@ -46,6 +46,22 @@
       Submissions
     </a>
     <a
+      routerLink="birthdays"
+      routerLinkActive
+      #birthdaysTab="routerLinkActive"
+      class="border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="birthdaysTab.isActive"
+      [class.font-bold]="birthdaysTab.isActive"
+      [class.text-brand-700]="birthdaysTab.isActive"
+      [class.dark:text-brand-300]="birthdaysTab.isActive"
+      [class.border-transparent]="!birthdaysTab.isActive"
+      [class.font-semibold]="!birthdaysTab.isActive"
+      [class.text-slate-500]="!birthdaysTab.isActive"
+      [class.dark:text-slate-400]="!birthdaysTab.isActive"
+    >
+      Birthdays
+    </a>
+    <a
       routerLink="questions"
       routerLinkActive
       #questionsTab="routerLinkActive"

@@ -1,5 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { SupabaseClientService } from '../supabase/supabase-client';
+import { SessionService } from '../auth/session.service';
 import { MemberAnswer, MemberSubmission, MemberSummary } from './member';
 
 interface ActionResult {
@@ -9,12 +10,13 @@ interface ActionResult {
 @Service()
 export class MembersService {
   private readonly supabase = inject(SupabaseClientService).client;
+  private readonly session = inject(SessionService);
 
   async list(): Promise<MemberSummary[]> {
     const { data, error } = await this.supabase
       .from('users')
       .select(
-        'id, name, date_of_birth, gender, church, city_address, mobile, role, membership_status, created_at, is_idaf_leader, wants_idaf, cef_sector, wants_cef',
+        'id, name, avatar_url, date_of_birth, gender, church, city_address, mobile, role, membership_status, created_at, is_idaf_leader, wants_idaf, cef_sector, wants_cef',
       )
       .order('created_at', { ascending: false });
 
@@ -25,6 +27,7 @@ export class MembersService {
     return data.map((row) => ({
       id: row['id'] as string,
       name: row['name'] as string,
+      avatarUrl: row['avatar_url'] as string | null,
       dateOfBirth: row['date_of_birth'] as string | null,
       gender: row['gender'] as MemberSummary['gender'],
       church: (row['church'] as string | null) ?? 'CCSGM Kawit',
@@ -49,6 +52,28 @@ export class MembersService {
       .update({ membership_status: status })
       .eq('id', userId);
     return { error: error?.message ?? null };
+  }
+
+  async deleteMember(memberId: string): Promise<ActionResult> {
+    const token = this.session.session()?.access_token;
+    if (!token) {
+      return { error: 'Not signed in' };
+    }
+
+    try {
+      const response = await fetch('/api/delete-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ memberId }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        return { error: data.error ?? `Failed to delete member (${response.status})` };
+      }
+      return { error: null };
+    } catch {
+      return { error: 'Could not reach the server.' };
+    }
   }
 
   async listAnswers(userId: string): Promise<MemberAnswer[]> {
