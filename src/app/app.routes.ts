@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { elderGuard, memberOnlyGuard } from './core/auth/auth.guard';
+import { elderGuard, memberOnlyGuard, profileCompleteGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   {
@@ -36,10 +36,12 @@ export const routes: Routes = [
       },
       {
         path: 'prayers',
+        canActivate: [profileCompleteGuard],
         loadComponent: () => import('./features/dashboard/prayers/prayers').then((m) => m.Prayers),
       },
       {
         path: 'counseling',
+        canActivate: [profileCompleteGuard],
         loadComponent: () => import('./features/counseling/counseling').then((m) => m.Counseling),
       },
     ],

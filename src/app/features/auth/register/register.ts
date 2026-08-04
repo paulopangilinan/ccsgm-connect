@@ -70,4 +70,12 @@ export class Register {
       await this.router.navigateByUrl('/dashboard');
     });
   }
+
+  protected async continueWithGoogle(): Promise<void> {
+    this.formError.set(null);
+    const { error } = await this.session.signInWithGoogle();
+    if (error) {
+      this.formError.set(error);
+    }
+  }
 }

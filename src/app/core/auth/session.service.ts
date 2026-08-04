@@ -29,6 +29,15 @@ export class SessionService {
   readonly isApproved = computed(
     () => this.isElder() || this.profileState()?.membershipStatus === 'approved',
   );
+  // Mirrors the required fields enforced in Profile's save() -- keep in sync.
+  // Elders have no profile page, so they're exempt.
+  readonly isProfileComplete = computed(() => {
+    if (this.isElder()) {
+      return true;
+    }
+    const profile = this.profileState();
+    return !!(profile?.name?.trim() && profile.cityAddress?.trim() && profile.mobile?.trim());
+  });
 
   private readonly readyPromise: Promise<void>;
 
@@ -172,20 +181,22 @@ export class SessionService {
       return { error: 'Not signed in' };
     }
 
-    // Fixed path per user so a new upload overwrites the old one (no orphans).
-    const path = `${userId}/avatar`;
+    // Random path per upload -- a fixed {userId}/avatar path made the public
+    // URL guessable from a leaked user id alone (e.g. an "anonymous" elder
+    // reply's responder_id), letting a member deanonymize the responder by
+    // just loading their avatar. The old path is left orphaned in storage
+    // rather than deleted -- harmless since avatar_url no longer points to it.
+    const path = `${userId}/${crypto.randomUUID()}`;
     const { error: uploadError } = await this.supabase.storage
       .from('avatars')
-      .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+      .upload(path, file, { contentType: file.type || 'image/jpeg' });
 
     if (uploadError) {
       return { error: uploadError.message };
     }
 
     const { data } = this.supabase.storage.from('avatars').getPublicUrl(path);
-    // Cache-bust so the browser re-fetches after an overwrite at the same path.
-    const url = `${data.publicUrl}?v=${Date.now()}`;
-    return this.updateAvatarUrl(url);
+    return this.updateAvatarUrl(data.publicUrl);
   }
 
   private async initialize(): Promise<void> {
@@ -203,15 +214,22 @@ export class SessionService {
   // concurrent calls can land here for one sign-in. De-dupe by access token,
   // checked and set before any `await` so the two racing calls can't both pass
   // the guard -- otherwise both would hit provisionProfile's insert at once.
-  private lastAppliedAccessToken: string | null = null;
+  // Track the in-flight promise (not just a "seen" flag) so whichever caller
+  // needs the result -- e.g. signInWithPassword, awaited before navigation --
+  // still gets it instead of racing an early no-op return.
+  private inFlight: { token: string; promise: Promise<void> } | null = null;
 
-  private async applySession(session: Session | null): Promise<void> {
+  private applySession(session: Session | null): Promise<void> {
     const token = session?.access_token ?? null;
-    if (token !== null && token === this.lastAppliedAccessToken) {
-      return;
+    if (token !== null && this.inFlight?.token === token) {
+      return this.inFlight.promise;
     }
-    this.lastAppliedAccessToken = token;
+    const promise = this.doApplySession(session);
+    this.inFlight = token !== null ? { token, promise } : null;
+    return promise;
+  }
 
+  private async doApplySession(session: Session | null): Promise<void> {
     this.sessionState.set(session);
 
     if (!session) {

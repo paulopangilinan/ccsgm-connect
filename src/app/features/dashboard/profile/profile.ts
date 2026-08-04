@@ -131,6 +131,16 @@ export class Profile {
       this.errorMessage.set('Enter your name');
       return;
     }
+    const cityAddress = this.cityAddress().trim();
+    if (!cityAddress) {
+      this.errorMessage.set('Enter your city address');
+      return;
+    }
+    const mobile = this.mobile().trim();
+    if (!mobile) {
+      this.errorMessage.set('Enter your mobile number');
+      return;
+    }
 
     this.errorMessage.set(null);
     this.savedMessage.set(null);
@@ -141,8 +151,8 @@ export class Profile {
       dateOfBirth: this.dateOfBirth(),
       gender: this.gender(),
       church: this.church().trim() || 'CCSGM Kawit',
-      cityAddress: this.cityAddress().trim() || null,
-      mobile: this.mobile().trim() || null,
+      cityAddress,
+      mobile,
     });
     if (profileResult.error) {
       this.errorMessage.set(profileResult.error);

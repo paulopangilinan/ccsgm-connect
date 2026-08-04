@@ -291,6 +291,14 @@ create policy "responses readable by submitter and elders" on submission_respons
 create policy "responses written by elders" on submission_responses
   for insert with check (is_elder());
 
+-- Members can also reply on their own thread (two-way conversation, not just
+-- receiving elder replies).
+create policy "responses written by submitter" on submission_responses
+  for insert with check (
+    responder_id = auth.uid()
+    and exists (select 1 from submissions s where s.id = submission_id and s.user_id = auth.uid())
+  );
+
 create policy "testimonies readable by owner and elders" on testimonies
   for select using (user_id = auth.uid() or is_elder());
 
@@ -346,10 +354,32 @@ select
 from submissions s
 join users u on u.id = s.user_id;
 
+-- ─── Responses view: hides responder identity on anonymous elder replies ──
+-- responder_id is a NOT NULL FK so it can't be nulled on the row itself the
+-- way responder_name/responder_avatar_url are at write time; RLS is row-level
+-- only, so any member allowed to read the row at all would otherwise get the
+-- real responder_id back even when is_anonymous = true. Elders always see it.
+
+create view submission_responses_visible
+with (security_invoker = true)
+as
+select
+  id,
+  submission_id,
+  case when is_anonymous and not is_elder() then null else responder_id end as responder_id,
+  body,
+  created_at,
+  is_anonymous,
+  responder_name,
+  responder_avatar_url
+from submission_responses;
+
 -- ─── Realtime ────────────────────────────────────────────────────────
--- Event-driven updates to elders: the admin UI subscribes to these tables via
--- Supabase Realtime. RLS still applies, so elders only receive rows they may read.
+-- Event-driven updates for elders and members: the admin UI and reply threads
+-- subscribe to these tables via Supabase Realtime. RLS still applies, so each
+-- user only receives rows they may read.
 
 alter publication supabase_realtime add table users;
 alter publication supabase_realtime add table submissions;
 alter publication supabase_realtime add table testimonies;
+alter publication supabase_realtime add table submission_responses;

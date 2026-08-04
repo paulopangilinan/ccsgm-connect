@@ -1,4 +1,5 @@
 import { Service, inject } from '@angular/core';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseClientService } from '../supabase/supabase-client';
 import { SessionService } from '../auth/session.service';
 import { AdminSubmission, MySubmission, SubmissionResponse, SubmissionType } from './submission';
@@ -103,14 +104,54 @@ export class SubmissionsService {
     }));
   }
 
+  // Live-pushes new replies (RLS still applies -- a member only receives
+  // INSERTs for responses on their own submissions, elders receive all of
+  // them) so reply threads update without a manual reload. Returns an
+  // unsubscribe function; callers should invoke it on component destroy.
+  //
+  // Note on responder_id: postgres_changes streams the raw base-table row --
+  // RLS is row-level only, it can't null out a single column the way the
+  // submission_responses_visible view does for listResponses() below. We
+  // redact it here too so the normal app UI never displays/stores it, but
+  // that's best-effort: the un-redacted value still crosses the wire in the
+  // realtime payload, so this alone doesn't stop someone inspecting the raw
+  // socket frame. listResponses() via the view is the actually-enforced path.
+  subscribeToResponses(onInsert: (response: SubmissionResponse) => void): () => void {
+    const channel: RealtimeChannel = this.supabase
+      .channel(`submission-responses-${crypto.randomUUID()}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'submission_responses' },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          const isAnonymous = row['is_anonymous'] as boolean;
+          const shouldRedact = isAnonymous && !this.session.isElder();
+          onInsert({
+            id: row['id'] as string,
+            submissionId: row['submission_id'] as string,
+            responderId: shouldRedact ? null : (row['responder_id'] as string),
+            body: row['body'] as string,
+            createdAt: row['created_at'] as string,
+            responderName: row['responder_name'] as string | null,
+            responderAvatarUrl: row['responder_avatar_url'] as string | null,
+          });
+        },
+      )
+      .subscribe();
+
+    return () => void this.supabase.removeChannel(channel);
+  }
+
   async listResponses(submissionIds: string[]): Promise<SubmissionResponse[]> {
     if (submissionIds.length === 0) {
       return [];
     }
 
+    // Via the view, not the base table: it nulls responder_id for anonymous
+    // rows unless the viewer is an elder (see submission_responses_visible).
     const { data, error } = await this.supabase
-      .from('submission_responses')
-      .select('id, submission_id, body, created_at, responder_name, responder_avatar_url')
+      .from('submission_responses_visible')
+      .select('id, submission_id, responder_id, body, created_at, responder_name, responder_avatar_url')
       .in('submission_id', submissionIds)
       .order('created_at', { ascending: true });
 
@@ -121,6 +162,7 @@ export class SubmissionsService {
     return data.map((row) => ({
       id: row['id'] as string,
       submissionId: row['submission_id'] as string,
+      responderId: row['responder_id'] as string | null,
       body: row['body'] as string,
       createdAt: row['created_at'] as string,
       // Denormalized on the row (null when the elder replied anonymously).
@@ -159,14 +201,18 @@ export class SubmissionsService {
       return { response: null, error: error?.message ?? 'Failed to send reply' };
     }
 
-    // Fire-and-forget: the member gets emailed, but this never blocks or fails the reply itself.
-    void this.notifyReply(submissionId, isAnonymous);
+    if (this.session.isElder()) {
+      // Fire-and-forget: the member gets emailed, but this never blocks or fails the reply itself.
+      // Skipped when a member replies to their own thread -- there's no one to notify.
+      void this.notifyReply(submissionId, isAnonymous);
+    }
 
     return {
       error: null,
       response: {
         id: data['id'] as string,
         submissionId: data['submission_id'] as string,
+        responderId,
         body: data['body'] as string,
         createdAt: data['created_at'] as string,
         responderName,
