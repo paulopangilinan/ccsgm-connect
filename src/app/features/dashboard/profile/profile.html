@@ -196,11 +196,12 @@
       </div>
 
       <div>
-        <label for="profile-city" class="text-sm font-semibold">City address</label>
+        <label for="profile-city" class="text-sm font-semibold">City address <span class="text-red-500" aria-hidden="true">*</span></label>
         <input
           id="profile-city"
           type="text"
           placeholder="e.g. Kawit, Noveleta"
+          aria-required="true"
           [value]="cityAddress()"
           (input)="cityAddress.set($any($event.target).value)"
           class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
@@ -208,12 +209,13 @@
       </div>
 
       <div>
-        <label for="profile-mobile" class="text-sm font-semibold">Mobile number</label>
+        <label for="profile-mobile" class="text-sm font-semibold">Mobile number <span class="text-red-500" aria-hidden="true">*</span></label>
         <input
           id="profile-mobile"
           type="tel"
           inputmode="tel"
           placeholder="e.g. 0917 123 4567"
+          aria-required="true"
           [value]="mobile()"
           (input)="mobile.set($any($event.target).value)"
           class="mt-1 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"

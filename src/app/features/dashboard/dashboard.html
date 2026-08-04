@@ -11,6 +11,12 @@
     </p>
   }
 
+  @if (!session.isProfileComplete()) {
+    <p class="mt-4 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-700 dark:bg-white/5 dark:text-brand-200">
+      Finish your profile — name, city address, and mobile number — to unlock Prayer corner and Counseling.
+    </p>
+  }
+
   <!-- Tabs -->
   <nav class="mt-8 flex gap-1 border-b border-brand-100 dark:border-white/10" aria-label="Member sections">
     <a
@@ -29,38 +35,63 @@
     >
       Profile
     </a>
-    <a
-      routerLink="prayers"
-      routerLinkActive
-      #prayersTab="routerLinkActive"
-      class="border-b-2 px-4 py-2 text-sm transition"
-      [class.border-brand-600]="prayersTab.isActive"
-      [class.font-bold]="prayersTab.isActive"
-      [class.text-brand-700]="prayersTab.isActive"
-      [class.dark:text-brand-300]="prayersTab.isActive"
-      [class.border-transparent]="!prayersTab.isActive"
-      [class.font-semibold]="!prayersTab.isActive"
-      [class.text-slate-500]="!prayersTab.isActive"
-      [class.dark:text-slate-400]="!prayersTab.isActive"
-    >
-      Prayer corner
-    </a>
-    <a
-      routerLink="counseling"
-      routerLinkActive
-      #counselingTab="routerLinkActive"
-      class="border-b-2 px-4 py-2 text-sm transition"
-      [class.border-brand-600]="counselingTab.isActive"
-      [class.font-bold]="counselingTab.isActive"
-      [class.text-brand-700]="counselingTab.isActive"
-      [class.dark:text-brand-300]="counselingTab.isActive"
-      [class.border-transparent]="!counselingTab.isActive"
-      [class.font-semibold]="!counselingTab.isActive"
-      [class.text-slate-500]="!counselingTab.isActive"
-      [class.dark:text-slate-400]="!counselingTab.isActive"
-    >
-      Counseling
-    </a>
+    @if (session.isProfileComplete()) {
+      <a
+        routerLink="prayers"
+        routerLinkActive
+        #prayersTab="routerLinkActive"
+        class="border-b-2 px-4 py-2 text-sm transition"
+        [class.border-brand-600]="prayersTab.isActive"
+        [class.font-bold]="prayersTab.isActive"
+        [class.text-brand-700]="prayersTab.isActive"
+        [class.dark:text-brand-300]="prayersTab.isActive"
+        [class.border-transparent]="!prayersTab.isActive"
+        [class.font-semibold]="!prayersTab.isActive"
+        [class.text-slate-500]="!prayersTab.isActive"
+        [class.dark:text-slate-400]="!prayersTab.isActive"
+      >
+        Prayer corner
+      </a>
+      <a
+        routerLink="counseling"
+        routerLinkActive
+        #counselingTab="routerLinkActive"
+        class="border-b-2 px-4 py-2 text-sm transition"
+        [class.border-brand-600]="counselingTab.isActive"
+        [class.font-bold]="counselingTab.isActive"
+        [class.text-brand-700]="counselingTab.isActive"
+        [class.dark:text-brand-300]="counselingTab.isActive"
+        [class.border-transparent]="!counselingTab.isActive"
+        [class.font-semibold]="!counselingTab.isActive"
+        [class.text-slate-500]="!counselingTab.isActive"
+        [class.dark:text-slate-400]="!counselingTab.isActive"
+      >
+        Counseling
+      </a>
+    } @else {
+      <span
+        class="flex cursor-not-allowed items-center gap-1.5 border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-400 dark:text-slate-500"
+        title="Complete your profile to unlock this"
+        aria-disabled="true"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
+          <rect x="3" y="11" width="18" height="11" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Prayer corner
+      </span>
+      <span
+        class="flex cursor-not-allowed items-center gap-1.5 border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-400 dark:text-slate-500"
+        title="Complete your profile to unlock this"
+        aria-disabled="true"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
+          <rect x="3" y="11" width="18" height="11" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Counseling
+      </span>
+    }
   </nav>
 
   <router-outlet />

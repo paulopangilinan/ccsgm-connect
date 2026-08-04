@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { SubmissionsService } from '../../../core/submissions/submissions.service';
 import { AdminSubmission, SubmissionResponse, SubmissionType } from '../../../core/submissions/submission';
 import { ToggleSwitch } from '../../../shared/toggle-switch/toggle-switch';
+import { visibleResponses } from '../../../core/util/thread';
 
 type FilterType = 'all' | SubmissionType;
 
@@ -38,6 +39,7 @@ export class AdminSubmissions {
   protected readonly replySms = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly smsNote = signal<string | null>(null);
+  protected readonly expandedThreads = signal<Set<string>>(new Set());
 
   protected readonly filters: { value: FilterType; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -63,6 +65,19 @@ export class AdminSubmissions {
 
   constructor() {
     void this.load();
+
+    const unsubscribe = this.submissionsService.subscribeToResponses((response) => this.addResponse(response));
+    inject(DestroyRef).onDestroy(unsubscribe);
+  }
+
+  private addResponse(response: SubmissionResponse): void {
+    const grouped = new Map(this.responsesBySubmission());
+    const existing = grouped.get(response.submissionId) ?? [];
+    if (existing.some((r) => r.id === response.id)) {
+      return;
+    }
+    grouped.set(response.submissionId, [...existing, response]);
+    this.responsesBySubmission.set(grouped);
   }
 
   protected typeLabel(type: SubmissionType): string {
@@ -71,6 +86,27 @@ export class AdminSubmissions {
 
   protected responsesFor(submissionId: string): SubmissionResponse[] {
     return this.responsesBySubmission().get(submissionId) ?? [];
+  }
+
+  protected visibleResponsesFor(submissionId: string): SubmissionResponse[] {
+    return visibleResponses(this.responsesFor(submissionId), this.expandedThreads().has(submissionId));
+  }
+
+  protected hiddenCountFor(submissionId: string): number {
+    if (this.expandedThreads().has(submissionId)) {
+      return 0;
+    }
+    return Math.max(0, this.responsesFor(submissionId).length - this.visibleResponsesFor(submissionId).length);
+  }
+
+  protected toggleThread(submissionId: string): void {
+    const next = new Set(this.expandedThreads());
+    if (next.has(submissionId)) {
+      next.delete(submissionId);
+    } else {
+      next.add(submissionId);
+    }
+    this.expandedThreads.set(next);
   }
 
   protected draftFor(submissionId: string): string {
@@ -120,9 +156,7 @@ export class AdminSubmissions {
       return;
     }
 
-    const grouped = new Map(this.responsesBySubmission());
-    grouped.set(submissionId, [...(grouped.get(submissionId) ?? []), response]);
-    this.responsesBySubmission.set(grouped);
+    this.addResponse(response);
     this.setDraft(submissionId, '');
     this.replyingId.set(null);
 
