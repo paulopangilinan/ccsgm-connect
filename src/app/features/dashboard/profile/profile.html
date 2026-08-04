@@ -3,11 +3,15 @@
     {{ errorMessage() }}
   </p>
 }
-@if (savedMessage()) {
-  <p role="status" class="mt-4 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:text-green-300">
-    Profile saved.
-  </p>
+
+@for (greeting of greetings(); track greeting.createdAt) {
+  <div class="mt-4 rounded-2xl border border-accent-500/30 bg-accent-500/10 px-5 py-4">
+    <p class="text-sm font-semibold text-accent-600 dark:text-accent-400">🎉 {{ greeting.fromName }}</p>
+    <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ greeting.message }}</p>
+  </div>
 }
+
+<app-toast [message]="savedMessage()" tone="success" (dismissed)="savedMessage.set(null)" />
 
 <ng-template #questionField let-question>
   @if (question.fieldType === 'toggle') {

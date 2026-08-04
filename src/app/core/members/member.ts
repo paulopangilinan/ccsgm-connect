@@ -4,6 +4,7 @@ import { SubmissionType } from '../submissions/submission';
 export interface MemberSummary {
   id: string;
   name: string;
+  avatarUrl: string | null;
   dateOfBirth: string | null;
   gender: Gender | null;
   church: string;

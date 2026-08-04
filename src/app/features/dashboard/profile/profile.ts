@@ -3,14 +3,16 @@ import { NgTemplateOutlet } from '@angular/common';
 import { SessionService } from '../../../core/auth/session.service';
 import { QuestionsService } from '../../../core/questions/questions.service';
 import { QuestionAnswersService } from '../../../core/questions/question-answers.service';
+import { GreetingsService, Greeting } from '../../../core/greetings/greetings.service';
 import { Question } from '../../../core/questions/question';
 import { Gender } from '../../../core/auth/app-user';
 import { DatePicker } from '../../../shared/date-picker/date-picker';
 import { CameraCapture } from '../../../shared/camera-capture/camera-capture';
+import { Toast } from '../../../shared/toast/toast';
 
 @Component({
   selector: 'app-profile',
-  imports: [NgTemplateOutlet, DatePicker, CameraCapture],
+  imports: [NgTemplateOutlet, DatePicker, CameraCapture, Toast],
   templateUrl: './profile.html',
   styleUrl: './profile.css',
 })
@@ -18,11 +20,13 @@ export class Profile {
   protected readonly session = inject(SessionService);
   private readonly questionsService = inject(QuestionsService);
   private readonly questionAnswers = inject(QuestionAnswersService);
+  private readonly greetingsService = inject(GreetingsService);
 
+  protected readonly greetings = signal<Greeting[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly savedMessage = signal(false);
+  protected readonly savedMessage = signal<string | null>(null);
 
   protected readonly uploadingAvatar = signal(false);
   protected readonly avatarError = signal<string | null>(null);
@@ -129,7 +133,7 @@ export class Profile {
     }
 
     this.errorMessage.set(null);
-    this.savedMessage.set(false);
+    this.savedMessage.set(null);
     this.saving.set(true);
 
     const profileResult = await this.session.updateProfileBasics({
@@ -160,7 +164,7 @@ export class Profile {
     }
 
     this.saving.set(false);
-    this.savedMessage.set(true);
+    this.savedMessage.set('Profile saved.');
   }
 
   private async load(): Promise<void> {
@@ -174,12 +178,14 @@ export class Profile {
     this.cityAddress.set(profile?.cityAddress ?? '');
     this.mobile.set(profile?.mobile ?? '');
 
-    const [questions, existingAnswers] = await Promise.all([
+    const [questions, existingAnswers, greetings] = await Promise.all([
       this.questionsService.listActive(),
       this.questionAnswers.listForCurrentUser(),
+      this.greetingsService.listRecentForCurrentUser(),
     ]);
     this.questions.set(questions);
     this.answers.set(existingAnswers);
+    this.greetings.set(greetings);
     this.loading.set(false);
   }
 }

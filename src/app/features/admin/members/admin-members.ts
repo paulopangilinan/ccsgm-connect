@@ -2,8 +2,16 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MembersService } from '../../../core/members/members.service';
 import { NotificationsService } from '../../../core/notifications/notifications.service';
+import { SessionService } from '../../../core/auth/session.service';
 import { MemberAnswer, MemberSummary } from '../../../core/members/member';
 import { ageFromDob } from '../../../core/util/age';
+import { birthdayInfo } from '../../../core/util/birthday';
+
+const UPCOMING_BIRTHDAY_DAYS = 7;
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 @Component({
   selector: 'app-admin-members',
@@ -14,6 +22,7 @@ import { ageFromDob } from '../../../core/util/age';
 export class AdminMembers {
   private readonly membersService = inject(MembersService);
   private readonly notifications = inject(NotificationsService);
+  protected readonly session = inject(SessionService);
 
   protected readonly loading = signal(true);
   protected readonly members = signal<MemberSummary[]>([]);
@@ -24,10 +33,11 @@ export class AdminMembers {
   protected readonly errorMessage = signal<string | null>(null);
 
   protected readonly pending = computed(() =>
-    this.members().filter((m) => m.membershipStatus === 'pending'),
+    this.members().filter((m) => m.role !== 'elder' && m.membershipStatus === 'pending'),
   );
-  protected readonly active = computed(() =>
-    this.members().filter((m) => m.membershipStatus !== 'pending'),
+  protected readonly elders = computed(() => this.members().filter((m) => m.role === 'elder'));
+  protected readonly regularMembers = computed(() =>
+    this.members().filter((m) => m.role !== 'elder' && m.membershipStatus !== 'pending'),
   );
 
   constructor() {
@@ -50,6 +60,29 @@ export class AdminMembers {
 
   protected async reject(member: MemberSummary): Promise<void> {
     await this.updateStatus(member, 'rejected');
+  }
+
+  protected async deleteMember(member: MemberSummary): Promise<void> {
+    if (this.updatingId()) {
+      return;
+    }
+    if (!confirm(`Permanently delete ${member.name}'s account? This cannot be undone.`)) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.updatingId.set(member.id);
+    const { error } = await this.membersService.deleteMember(member.id);
+    this.updatingId.set(null);
+
+    if (error) {
+      this.errorMessage.set(error);
+      return;
+    }
+    if (this.expandedId() === member.id) {
+      this.expandedId.set(null);
+    }
+    await this.load();
   }
 
   private async updateStatus(
@@ -89,6 +122,15 @@ export class AdminMembers {
       member.church,
     ].filter((part): part is string => !!part);
     return parts.length ? parts.join(' · ') : 'Profile not completed';
+  }
+
+  protected upcomingBirthdayTitle(member: MemberSummary): string | null {
+    const info = birthdayInfo(member.dateOfBirth);
+    if (!info || info.daysUntil > UPCOMING_BIRTHDAY_DAYS) {
+      return null;
+    }
+    const dateLabel = `${MONTH_NAMES[info.month]} ${info.day}`;
+    return info.isToday ? `Birthday today — ${dateLabel}` : `Birthday ${dateLabel}`;
   }
 
   protected formatAnswer(answer: MemberAnswer): string {

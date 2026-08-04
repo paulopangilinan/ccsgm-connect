@@ -1,0 +1,24 @@
+@if (message()) {
+  <div
+    [attr.role]="tone() === 'error' ? 'alert' : 'status'"
+    [attr.aria-live]="tone() === 'error' ? 'assertive' : 'polite'"
+    (mouseenter)="pause()"
+    (mouseleave)="resume()"
+    (focusin)="pause()"
+    (focusout)="resume()"
+    class="fixed inset-x-4 bottom-6 z-50 mx-auto flex max-w-sm items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-lg sm:inset-x-auto sm:right-6"
+    [class.bg-green-600]="tone() === 'success'"
+    [class.bg-red-600]="tone() === 'error'"
+    [class.bg-slate-800]="tone() === 'info'"
+  >
+    <span class="flex-1">{{ message() }}</span>
+    <button
+      type="button"
+      (click)="dismissed.emit()"
+      aria-label="Dismiss"
+      class="shrink-0 text-white/80 hover:text-white"
+    >
+      ×
+    </button>
+  </div>
+}

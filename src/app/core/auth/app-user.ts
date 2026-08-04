@@ -1,3 +1,5 @@
+import type { ThemePreference } from '../theme/theme.service';
+
 export type UserRole = 'member' | 'elder';
 export type Gender = 'male' | 'female';
 export type MembershipStatus = 'pending' | 'approved' | 'rejected';
@@ -12,6 +14,7 @@ export interface AppUser {
   cityAddress: string | null;
   mobile: string | null;
   membershipStatus: MembershipStatus;
+  themePreference: ThemePreference;
   avatarUrl: string | null;
   branchId: string | null;
   groupId: string | null;

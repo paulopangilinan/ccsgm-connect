@@ -1,4 +1,5 @@
-import { Service, effect, signal } from '@angular/core';
+import { Service, effect, inject, signal } from '@angular/core';
+import { SessionService } from '../auth/session.service';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -6,6 +7,7 @@ const STORAGE_KEY = 'ccsgm-theme';
 
 @Service()
 export class ThemeService {
+  private readonly session = inject(SessionService);
   private readonly media = window.matchMedia('(prefers-color-scheme: dark)');
 
   readonly preference = signal<ThemePreference>(this.readStoredPreference());
@@ -27,10 +29,22 @@ export class ThemeService {
       }
       this.applyIsDark(this.resolveIsDark(pref));
     });
+
+    // Once signed in, the account's saved preference follows the member across
+    // devices/browsers and takes over from whatever was applied locally.
+    effect(() => {
+      const saved = this.session.profile()?.themePreference;
+      if (saved) {
+        this.preference.set(saved);
+      }
+    });
   }
 
   setPreference(pref: ThemePreference): void {
     this.preference.set(pref);
+    if (this.session.isAuthenticated()) {
+      void this.session.updateThemePreference(pref);
+    }
   }
 
   toggle(): void {

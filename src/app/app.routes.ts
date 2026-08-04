@@ -15,6 +15,16 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password').then((m) => m.ResetPassword),
+  },
+  {
     path: 'dashboard',
     canActivate: [memberOnlyGuard],
     loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
@@ -56,6 +66,11 @@ export const routes: Routes = [
         path: 'members',
         loadComponent: () =>
           import('./features/admin/members/admin-members').then((m) => m.AdminMembers),
+      },
+      {
+        path: 'birthdays',
+        loadComponent: () =>
+          import('./features/admin/birthdays/admin-birthdays').then((m) => m.AdminBirthdays),
       },
     ],
   },
