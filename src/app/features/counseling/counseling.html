@@ -59,9 +59,15 @@
                   <li class="flex gap-3 rounded-2xl bg-brand-50/60 px-4 py-3 text-sm dark:bg-white/5">
                     @if (response.responderAvatarUrl) {
                       <img [src]="response.responderAvatarUrl" alt="" referrerpolicy="no-referrer" class="h-8 w-8 shrink-0 rounded-full object-cover" />
-                    } @else {
+                    } @else if (response.responderName) {
                       <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-200 text-xs font-bold text-brand-700 dark:bg-white/10 dark:text-brand-200" aria-hidden="true">
-                        {{ (response.responderName ?? 'E')[0] }}
+                        {{ response.responderName[0] }}
+                      </span>
+                    } @else {
+                      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-600 to-accent-500 text-white" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
                       </span>
                     }
                     <div class="min-w-0 flex-1">

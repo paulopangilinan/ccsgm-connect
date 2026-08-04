@@ -23,6 +23,7 @@ export class App {
   private readonly idleTimeout = inject(IdleTimeoutService);
 
   protected readonly uploadingAvatar = signal(false);
+  protected readonly currentYear = new Date().getFullYear();
 
   protected async signOut(): Promise<void> {
     await this.session.signOut();
