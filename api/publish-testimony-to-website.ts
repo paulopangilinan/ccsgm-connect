@@ -22,68 +22,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing testimonyId.' });
   }
 
-  const asCaller = createCallerClient(token);
-  const { data: userData } = await asCaller.auth.getUser(token);
-  const callerId = userData?.user?.id;
-  if (!callerId) {
-    return res.status(401).json({ error: 'Invalid session.' });
-  }
-
-  const { data: caller } = await asCaller.from('users').select('role').eq('id', callerId).maybeSingle();
-  if (caller?.role !== 'elder') {
-    return res.status(403).json({ error: 'Elders only.' });
-  }
-
-  const admin = createAdminClient();
-
-  const { data: testimony } = await admin
-    .from('testimonies')
-    .select('id, user_id, body, is_anonymous, share_to_website, website_review_status, linked_prayer_id')
-    .eq('id', testimonyId)
-    .maybeSingle();
-  if (!testimony) {
-    return res.status(404).json({ error: 'Testimony not found.' });
-  }
-  if (!testimony.share_to_website || testimony.website_review_status !== 'approved') {
-    return res.status(409).json({ error: 'Testimony is not approved for the website.' });
-  }
-
-  const { data: media } = await admin.from('testimony_media').select('url').eq('testimony_id', testimonyId);
-  const { data: submitter } = await admin
-    .from('users')
-    .select('name, gender, church')
-    .eq('id', testimony.user_id)
-    .maybeSingle();
-
-  let linkedPrayerBody: string | null = null;
-  if (testimony.linked_prayer_id) {
-    const { data: prayer } = await admin
-      .from('submissions')
-      .select('body')
-      .eq('id', testimony.linked_prayer_id)
-      .maybeSingle();
-    linkedPrayerBody = prayer?.body ?? null;
-  }
-
-  const church = submitter?.church ?? 'CCSGM Kawit';
-  // Anonymous format is only ever used here, when is_anonymous is true --
-  // a named testimony's author is simply the member's own name.
-  const author = testimony.is_anonymous
-    ? `A ${submitter?.gender === 'male' ? 'brother' : 'sister'} from ${church}`
-    : (submitter?.name ?? 'A member');
-
-  const websiteUrl = process.env.WEBSITE_API_URL;
-  const secret = process.env.WEBSITE_SYNC_SECRET;
-  if (!websiteUrl || !secret) {
-    const message = 'Website sync is not configured on the server.';
-    await admin
-      .from('testimonies')
-      .update({ website_sync_status: 'failed', website_sync_error: message })
-      .eq('id', testimonyId);
-    return res.status(500).json({ error: message });
-  }
-
+  // Everything below used to run unguarded -- any unexpected throw (a bad
+  // Supabase client config, a network blip, etc.) crashed the whole Lambda
+  // and Vercel showed its own generic error page instead of a diagnosable
+  // JSON body. Wrapping the whole thing means a failure always comes back
+  // as { error: <real message> }, visible in admin/testimonies.
   try {
+    const asCaller = createCallerClient(token);
+    const { data: userData } = await asCaller.auth.getUser(token);
+    const callerId = userData?.user?.id;
+    if (!callerId) {
+      return res.status(401).json({ error: 'Invalid session.' });
+    }
+
+    const { data: caller } = await asCaller.from('users').select('role').eq('id', callerId).maybeSingle();
+    if (caller?.role !== 'elder') {
+      return res.status(403).json({ error: 'Elders only.' });
+    }
+
+    const admin = createAdminClient();
+
+    const { data: testimony } = await admin
+      .from('testimonies')
+      .select('id, user_id, body, is_anonymous, share_to_website, website_review_status, linked_prayer_id')
+      .eq('id', testimonyId)
+      .maybeSingle();
+    if (!testimony) {
+      return res.status(404).json({ error: 'Testimony not found.' });
+    }
+    if (!testimony.share_to_website || testimony.website_review_status !== 'approved') {
+      return res.status(409).json({ error: 'Testimony is not approved for the website.' });
+    }
+
+    const { data: media } = await admin.from('testimony_media').select('url').eq('testimony_id', testimonyId);
+    const { data: submitter } = await admin
+      .from('users')
+      .select('name, gender, church')
+      .eq('id', testimony.user_id)
+      .maybeSingle();
+
+    let linkedPrayerBody: string | null = null;
+    if (testimony.linked_prayer_id) {
+      const { data: prayer } = await admin
+        .from('submissions')
+        .select('body')
+        .eq('id', testimony.linked_prayer_id)
+        .maybeSingle();
+      linkedPrayerBody = prayer?.body ?? null;
+    }
+
+    const church = submitter?.church ?? 'CCSGM Kawit';
+    // Anonymous format is only ever used here, when is_anonymous is true --
+    // a named testimony's author is simply the member's own name.
+    const author = testimony.is_anonymous
+      ? `A ${submitter?.gender === 'male' ? 'brother' : 'sister'} from ${church}`
+      : (submitter?.name ?? 'A member');
+
+    const websiteUrl = process.env.WEBSITE_API_URL;
+    const secret = process.env.WEBSITE_SYNC_SECRET;
+    if (!websiteUrl || !secret) {
+      const message = 'Website sync is not configured on the server.';
+      await admin
+        .from('testimonies')
+        .update({ website_sync_status: 'failed', website_sync_error: message })
+        .eq('id', testimonyId);
+      return res.status(500).json({ error: message });
+    }
+
     const response = await fetch(`${websiteUrl.replace(/\/+$/, '')}/api/testimony-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-ccsgm-sync-secret': secret },
@@ -119,11 +124,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('id', testimonyId);
     return res.status(200).json({ ok: true, postId: data.postId });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Could not reach the website.';
-    await admin
-      .from('testimonies')
-      .update({ website_sync_status: 'failed', website_sync_error: message })
-      .eq('id', testimonyId);
-    return res.status(502).json({ error: message });
+    const message = err instanceof Error ? err.message : 'Unexpected server error.';
+    console.error('[publish-testimony-to-website] unhandled error', err);
+    try {
+      const admin = createAdminClient();
+      await admin
+        .from('testimonies')
+        .update({ website_sync_status: 'failed', website_sync_error: message })
+        .eq('id', testimonyId);
+    } catch {
+      // Best-effort -- the JSON error response below still gets returned
+      // even if this couldn't persist (e.g. createAdminClient itself failed).
+    }
+    return res.status(500).json({ error: message });
   }
 }
