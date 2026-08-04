@@ -1,7 +1,7 @@
 import { Service, computed, inject, signal } from '@angular/core';
 import type { Session } from '@supabase/supabase-js';
 import { SupabaseClientService } from '../supabase/supabase-client';
-import { AppUser, ProfileBasics } from './app-user';
+import { AppUser, NotificationPreferences, ProfileBasics } from './app-user';
 import { toProperCase } from '../util/name-case';
 
 interface AuthResult {
@@ -157,6 +157,32 @@ export class SessionService {
     return { error: null };
   }
 
+  async updateNotificationPreferences(preferences: NotificationPreferences): Promise<AuthResult> {
+    const userId = this.sessionState()?.user.id;
+    if (!userId) {
+      return { error: 'Not signed in' };
+    }
+
+    const { error } = await this.supabase
+      .from('users')
+      .update({
+        notify_new_members: preferences.notifyNewMembers,
+        notify_prayer_requests: preferences.notifyPrayerRequests,
+        notify_new_testimonies: preferences.notifyNewTestimonies,
+        notify_counseling_requests: preferences.notifyCounselingRequests,
+      })
+      .eq('id', userId);
+    if (error) {
+      return { error: error.message };
+    }
+
+    const profile = this.profileState();
+    if (profile) {
+      this.profileState.set({ ...profile, notificationPreferences: preferences });
+    }
+    return { error: null };
+  }
+
   async updateAvatarUrl(avatarUrl: string): Promise<AuthResult> {
     const userId = this.sessionState()?.user.id;
     if (!userId) {
@@ -244,7 +270,9 @@ export class SessionService {
   private async fetchProfile(userId: string): Promise<AppUser | null> {
     const { data } = await this.supabase
       .from('users')
-      .select('id, role, name, date_of_birth, gender, church, city_address, mobile, membership_status, theme_preference, avatar_url, branch_id, group_id')
+      .select(
+        'id, role, name, date_of_birth, gender, church, city_address, mobile, membership_status, theme_preference, avatar_url, branch_id, group_id, notify_new_members, notify_prayer_requests, notify_new_testimonies, notify_counseling_requests',
+      )
       .eq('id', userId)
       .maybeSingle();
 
@@ -260,7 +288,9 @@ export class SessionService {
     const { data } = await this.supabase
       .from('users')
       .insert({ id: session.user.id, name, avatar_url: avatarUrl })
-      .select('id, role, name, date_of_birth, gender, church, city_address, mobile, membership_status, theme_preference, avatar_url, branch_id, group_id')
+      .select(
+        'id, role, name, date_of_birth, gender, church, city_address, mobile, membership_status, theme_preference, avatar_url, branch_id, group_id, notify_new_members, notify_prayer_requests, notify_new_testimonies, notify_counseling_requests',
+      )
       .maybeSingle();
 
     if (!data) {
@@ -317,6 +347,12 @@ export class SessionService {
       membershipStatus: (data['membership_status'] as AppUser['membershipStatus'] | null) ?? 'pending',
       themePreference: (data['theme_preference'] as AppUser['themePreference'] | null) ?? 'system',
       avatarUrl: data['avatar_url'] as string | null,
+      notificationPreferences: {
+        notifyNewMembers: (data['notify_new_members'] as boolean | null) ?? true,
+        notifyPrayerRequests: (data['notify_prayer_requests'] as boolean | null) ?? true,
+        notifyNewTestimonies: (data['notify_new_testimonies'] as boolean | null) ?? true,
+        notifyCounselingRequests: (data['notify_counseling_requests'] as boolean | null) ?? true,
+      },
       branchId: data['branch_id'] as string | null,
       groupId: data['group_id'] as string | null,
     };

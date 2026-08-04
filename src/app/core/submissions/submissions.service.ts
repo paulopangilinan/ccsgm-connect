@@ -13,7 +13,12 @@ export class SubmissionsService {
   private readonly supabase = inject(SupabaseClientService).client;
   private readonly session = inject(SessionService);
 
-  async create(type: SubmissionType, body: string, isAnonymous: boolean): Promise<ActionResult> {
+  async create(
+    type: SubmissionType,
+    body: string,
+    isAnonymous: boolean,
+    images: File[] = [],
+  ): Promise<ActionResult & { mediaWarning?: string }> {
     const userId = this.session.session()?.user.id;
     if (!userId) {
       return { error: 'Not signed in' };
@@ -25,12 +30,46 @@ export class SubmissionsService {
       .select('id')
       .single();
 
-    if (!error && data && (type === 'prayer_request' || type === 'counsel_request')) {
-      // Fire-and-forget: elders get emailed, but this never blocks or fails the submission itself.
-      void this.notifyNewSubmission(data['id'] as string);
+    if (error || !data) {
+      return { error: error?.message ?? 'Failed to save submission' };
     }
 
-    return { error: error?.message ?? null };
+    const submissionId = data['id'] as string;
+
+    // From here on, failures are non-fatal: the submission row already
+    // exists, so returning an error would make the caller think nothing was
+    // saved and retry -- creating a duplicate submission with the same text.
+    // A failed photo is just dropped and reported back via mediaWarning.
+    let mediaWarning: string | undefined;
+    const urls: string[] = [];
+    for (const [index, image] of images.entries()) {
+      const path = `${userId}/${submissionId}/${index}`;
+      const { error: uploadError } = await this.supabase.storage
+        .from('submission-media')
+        .upload(path, image, { upsert: true, contentType: image.type || 'image/jpeg' });
+      if (uploadError) {
+        mediaWarning = 'Saved, but one or more photos failed to upload.';
+        continue;
+      }
+      const { data: publicUrl } = this.supabase.storage.from('submission-media').getPublicUrl(path);
+      urls.push(publicUrl.publicUrl);
+    }
+
+    if (urls.length > 0) {
+      const { error: mediaError } = await this.supabase
+        .from('submission_media')
+        .insert(urls.map((url) => ({ submission_id: submissionId, url })));
+      if (mediaError) {
+        mediaWarning = 'Saved, but photos failed to attach.';
+      }
+    }
+
+    if (type === 'prayer_request' || type === 'counsel_request') {
+      // Fire-and-forget: elders get emailed, but this never blocks or fails the submission itself.
+      void this.notifyNewSubmission(submissionId);
+    }
+
+    return { error: null, mediaWarning };
   }
 
   private async notifyNewSubmission(submissionId: string): Promise<void> {
@@ -57,7 +96,7 @@ export class SubmissionsService {
 
     const { data, error } = await this.supabase
       .from('submissions')
-      .select('id, type, body, is_anonymous, is_answered, created_at')
+      .select('id, type, body, is_anonymous, is_answered, created_at, submission_media(url)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -72,6 +111,7 @@ export class SubmissionsService {
       isAnonymous: row['is_anonymous'] as boolean,
       isAnswered: row['is_answered'] as boolean,
       createdAt: row['created_at'] as string,
+      mediaUrls: ((row['submission_media'] as { url: string }[] | null) ?? []).map((m) => m.url),
     }));
   }
 
@@ -83,14 +123,33 @@ export class SubmissionsService {
     return { error: error?.message ?? null };
   }
 
-  async listForAdmin(): Promise<AdminSubmission[]> {
+  async listForAdmin(type: SubmissionType): Promise<AdminSubmission[]> {
     const { data, error } = await this.supabase
       .from('submissions_admin')
       .select('id, type, body, is_anonymous, created_at, submitted_by, submitted_by_avatar')
+      .eq('type', type)
       .order('created_at', { ascending: false });
 
     if (error || !data) {
       return [];
+    }
+
+    // submissions_admin is a view, so PostgREST can't auto-embed
+    // submission_media the way listMine() embeds it on the base table --
+    // fetched separately and merged by id instead.
+    const ids = data.map((row) => row['id'] as string);
+    const mediaBySubmission = new Map<string, string[]>();
+    if (ids.length > 0) {
+      const { data: media } = await this.supabase
+        .from('submission_media')
+        .select('submission_id, url')
+        .in('submission_id', ids);
+      for (const row of media ?? []) {
+        const submissionId = row['submission_id'] as string;
+        const list = mediaBySubmission.get(submissionId) ?? [];
+        list.push(row['url'] as string);
+        mediaBySubmission.set(submissionId, list);
+      }
     }
 
     return data.map((row) => ({
@@ -101,6 +160,7 @@ export class SubmissionsService {
       createdAt: row['created_at'] as string,
       submittedBy: row['submitted_by'] as string | null,
       submittedByAvatar: row['submitted_by_avatar'] as string | null,
+      mediaUrls: mediaBySubmission.get(row['id'] as string) ?? [],
     }));
   }
 

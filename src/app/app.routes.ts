@@ -40,6 +40,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/prayers/prayers').then((m) => m.Prayers),
       },
       {
+        path: 'testimonies',
+        canActivate: [profileCompleteGuard],
+        loadComponent: () => import('./features/dashboard/testimonies/testimonies').then((m) => m.Testimonies),
+      },
+      {
         path: 'counseling',
         canActivate: [profileCompleteGuard],
         loadComponent: () => import('./features/counseling/counseling').then((m) => m.Counseling),
@@ -56,13 +61,37 @@ export const routes: Routes = [
       { path: '', redirectTo: 'members', pathMatch: 'full' },
       {
         path: 'submissions',
+        data: { type: 'prayer_request' },
         loadComponent: () =>
           import('./features/admin/submissions/admin-submissions').then((m) => m.AdminSubmissions),
       },
       {
-        path: 'questions',
+        path: 'counseling',
+        data: { type: 'counsel_request' },
         loadComponent: () =>
-          import('./features/admin/questions/admin-questions').then((m) => m.AdminQuestions),
+          import('./features/admin/submissions/admin-submissions').then((m) => m.AdminSubmissions),
+      },
+      {
+        path: 'testimonies',
+        loadComponent: () =>
+          import('./features/admin/testimonies/admin-testimonies').then((m) => m.AdminTestimonies),
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./features/admin/settings/settings').then((m) => m.Settings),
+        children: [
+          { path: '', redirectTo: 'questions', pathMatch: 'full' },
+          {
+            path: 'questions',
+            loadComponent: () =>
+              import('./features/admin/questions/admin-questions').then((m) => m.AdminQuestions),
+          },
+          {
+            path: 'notifications',
+            loadComponent: () =>
+              import('./features/admin/notifications/admin-notifications').then((m) => m.AdminNotifications),
+          },
+        ],
       },
       {
         path: 'members',

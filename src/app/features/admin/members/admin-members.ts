@@ -62,6 +62,26 @@ export class AdminMembers {
     await this.updateStatus(member, 'rejected');
   }
 
+  protected async makeElder(member: MemberSummary): Promise<void> {
+    if (this.updatingId()) {
+      return;
+    }
+    if (!confirm(`Make ${member.name} an elder? They'll get full admin access, including approving members and replying to prayer/counseling requests.`)) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.updatingId.set(member.id);
+    const { error } = await this.membersService.makeElder(member.id);
+    this.updatingId.set(null);
+
+    if (error) {
+      this.errorMessage.set(error);
+      return;
+    }
+    await this.load();
+  }
+
   protected async deleteMember(member: MemberSummary): Promise<void> {
     if (this.updatingId()) {
       return;

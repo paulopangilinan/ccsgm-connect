@@ -1,10 +1,25 @@
-<section class="mx-auto max-w-3xl px-6 py-16">
-  <h1 class="text-2xl font-extrabold">Elder admin</h1>
+<section class="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
+  <h1 class="text-xl font-extrabold sm:text-2xl">Elder admin</h1>
   <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
     Members, submissions, and the question builder land here.
   </p>
 
-  <nav class="mt-6 flex gap-2 border-b border-brand-100 dark:border-white/10" aria-label="Admin sections">
+  @if (inSettings()) {
+    <a
+      routerLink="/admin/members"
+      class="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 transition hover:text-brand-800 dark:text-brand-200 dark:hover:text-brand-100"
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+      </svg>
+      Back to dashboard
+    </a>
+  } @else {
+    <nav
+      class="-mx-4 mt-6 flex gap-2 overflow-x-auto whitespace-nowrap border-b border-brand-100 px-4 pb-px sm:mx-0 sm:px-0 dark:border-white/10"
+      aria-label="Admin sections"
+    >
     <a
       routerLink="members"
       routerLinkActive
@@ -33,7 +48,7 @@
       routerLink="submissions"
       routerLinkActive
       #submissionsTab="routerLinkActive"
-      class="border-b-2 px-4 py-2 text-sm transition"
+      class="inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm transition"
       [class.border-brand-600]="submissionsTab.isActive"
       [class.font-bold]="submissionsTab.isActive"
       [class.text-brand-700]="submissionsTab.isActive"
@@ -43,7 +58,63 @@
       [class.text-slate-500]="!submissionsTab.isActive"
       [class.dark:text-slate-400]="!submissionsTab.isActive"
     >
-      Submissions
+      Prayer corner
+      @if (notifications.pendingPrayerCount() > 0) {
+        <span
+          class="grid min-w-5 place-items-center rounded-full bg-accent-500 px-1.5 text-xs font-bold text-white"
+          [attr.aria-label]="notifications.pendingPrayerCount() + ' prayer requests awaiting reply'"
+        >
+          {{ notifications.pendingPrayerCount() }}
+        </span>
+      }
+    </a>
+    <a
+      routerLink="counseling"
+      routerLinkActive
+      #counselingTab="routerLinkActive"
+      class="inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="counselingTab.isActive"
+      [class.font-bold]="counselingTab.isActive"
+      [class.text-brand-700]="counselingTab.isActive"
+      [class.dark:text-brand-300]="counselingTab.isActive"
+      [class.border-transparent]="!counselingTab.isActive"
+      [class.font-semibold]="!counselingTab.isActive"
+      [class.text-slate-500]="!counselingTab.isActive"
+      [class.dark:text-slate-400]="!counselingTab.isActive"
+    >
+      Counseling
+      @if (notifications.pendingCounselCount() > 0) {
+        <span
+          class="grid min-w-5 place-items-center rounded-full bg-accent-500 px-1.5 text-xs font-bold text-white"
+          [attr.aria-label]="notifications.pendingCounselCount() + ' counseling requests awaiting reply'"
+        >
+          {{ notifications.pendingCounselCount() }}
+        </span>
+      }
+    </a>
+    <a
+      routerLink="testimonies"
+      routerLinkActive
+      #testimoniesTab="routerLinkActive"
+      class="inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm transition"
+      [class.border-brand-600]="testimoniesTab.isActive"
+      [class.font-bold]="testimoniesTab.isActive"
+      [class.text-brand-700]="testimoniesTab.isActive"
+      [class.dark:text-brand-300]="testimoniesTab.isActive"
+      [class.border-transparent]="!testimoniesTab.isActive"
+      [class.font-semibold]="!testimoniesTab.isActive"
+      [class.text-slate-500]="!testimoniesTab.isActive"
+      [class.dark:text-slate-400]="!testimoniesTab.isActive"
+    >
+      Testimonies
+      @if (notifications.pendingTestimonyCount() > 0) {
+        <span
+          class="grid min-w-5 place-items-center rounded-full bg-accent-500 px-1.5 text-xs font-bold text-white"
+          [attr.aria-label]="notifications.pendingTestimonyCount() + ' testimonies awaiting review'"
+        >
+          {{ notifications.pendingTestimonyCount() }}
+        </span>
+      }
     </a>
     <a
       routerLink="birthdays"
@@ -61,23 +132,8 @@
     >
       Birthdays
     </a>
-    <a
-      routerLink="questions"
-      routerLinkActive
-      #questionsTab="routerLinkActive"
-      class="border-b-2 px-4 py-2 text-sm transition"
-      [class.border-brand-600]="questionsTab.isActive"
-      [class.font-bold]="questionsTab.isActive"
-      [class.text-brand-700]="questionsTab.isActive"
-      [class.dark:text-brand-300]="questionsTab.isActive"
-      [class.border-transparent]="!questionsTab.isActive"
-      [class.font-semibold]="!questionsTab.isActive"
-      [class.text-slate-500]="!questionsTab.isActive"
-      [class.dark:text-slate-400]="!questionsTab.isActive"
-    >
-      Questions
-    </a>
-  </nav>
+    </nav>
+  }
 
   <router-outlet />
 </section>

@@ -1,11 +1,11 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { SubmissionsService } from '../../../core/submissions/submissions.service';
 import { AdminSubmission, SubmissionResponse, SubmissionType } from '../../../core/submissions/submission';
 import { ToggleSwitch } from '../../../shared/toggle-switch/toggle-switch';
 import { visibleResponses } from '../../../core/util/thread';
-
-type FilterType = 'all' | SubmissionType;
+import { NotificationsService } from '../../../core/notifications/notifications.service';
 
 interface MemberGroup {
   name: string;
@@ -13,12 +13,10 @@ interface MemberGroup {
   items: AdminSubmission[];
 }
 
-const TYPE_LABELS: Record<SubmissionType, string> = {
-  prayer_request: 'Prayer request',
-  testimony: 'Testimony',
-  counsel_request: 'Counsel request',
-};
-
+// Shared by admin/submissions (Prayer corner) and admin/counseling -- which
+// single SubmissionType this instance shows comes from the route's static
+// `data.type` (see app.routes.ts). Reply/SMS/anonymous-thread handling is
+// identical either way, so one component backs both tabs.
 @Component({
   selector: 'app-admin-submissions',
   imports: [DatePipe, ToggleSwitch],
@@ -27,11 +25,12 @@ const TYPE_LABELS: Record<SubmissionType, string> = {
 })
 export class AdminSubmissions {
   private readonly submissionsService = inject(SubmissionsService);
+  private readonly notifications = inject(NotificationsService);
+  private readonly type = inject(ActivatedRoute).snapshot.data['type'] as SubmissionType;
 
   protected readonly loading = signal(true);
   protected readonly submissions = signal<AdminSubmission[]>([]);
   protected readonly responsesBySubmission = signal<Map<string, SubmissionResponse[]>>(new Map());
-  protected readonly filter = signal<FilterType>('all');
   protected readonly drafts = signal<Map<string, string>>(new Map());
   protected readonly sendingId = signal<string | null>(null);
   protected readonly replyingId = signal<string | null>(null);
@@ -41,20 +40,9 @@ export class AdminSubmissions {
   protected readonly smsNote = signal<string | null>(null);
   protected readonly expandedThreads = signal<Set<string>>(new Set());
 
-  protected readonly filters: { value: FilterType; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'prayer_request', label: 'Prayer requests' },
-    { value: 'testimony', label: 'Testimonies' },
-    { value: 'counsel_request', label: 'Counsel requests' },
-  ];
-
   protected readonly groups = computed<MemberGroup[]>(() => {
-    const filter = this.filter();
-    const all = this.submissions();
-    const filtered = filter === 'all' ? all : all.filter((s) => s.type === filter);
-
     const map = new Map<string, MemberGroup>();
-    for (const submission of filtered) {
+    for (const submission of this.submissions()) {
       const name = submission.submittedBy ?? 'Anonymous';
       const group = map.get(name) ?? { name, avatar: submission.submittedByAvatar, items: [] };
       group.items.push(submission);
@@ -65,6 +53,13 @@ export class AdminSubmissions {
 
   constructor() {
     void this.load();
+
+    // Opening this tab clears its badge, regardless of whether anything gets
+    // replied to -- the count is "unread since I last looked", not "still
+    // needs a reply".
+    void (this.type === 'prayer_request'
+      ? this.notifications.markPrayerCornerViewed()
+      : this.notifications.markCounselingViewed());
 
     const unsubscribe = this.submissionsService.subscribeToResponses((response) => this.addResponse(response));
     inject(DestroyRef).onDestroy(unsubscribe);
@@ -78,10 +73,6 @@ export class AdminSubmissions {
     }
     grouped.set(response.submissionId, [...existing, response]);
     this.responsesBySubmission.set(grouped);
-  }
-
-  protected typeLabel(type: SubmissionType): string {
-    return TYPE_LABELS[type];
   }
 
   protected responsesFor(submissionId: string): SubmissionResponse[] {
@@ -117,10 +108,6 @@ export class AdminSubmissions {
     const next = new Map(this.drafts());
     next.set(submissionId, value);
     this.drafts.set(next);
-  }
-
-  protected setFilter(filter: FilterType): void {
-    this.filter.set(filter);
   }
 
   protected startReply(submissionId: string): void {
@@ -170,7 +157,7 @@ export class AdminSubmissions {
 
   private async load(): Promise<void> {
     this.loading.set(true);
-    const submissions = await this.submissionsService.listForAdmin();
+    const submissions = await this.submissionsService.listForAdmin(this.type);
     this.submissions.set(submissions);
 
     const responses = await this.submissionsService.listResponses(submissions.map((s) => s.id));

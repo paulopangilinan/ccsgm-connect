@@ -2,6 +2,7 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { TestimoniesService } from '../../../core/testimonies/testimonies.service';
 import { ContentSnippetsService } from '../../../core/content/content-snippets.service';
 import { ToggleSwitch } from '../../../shared/toggle-switch/toggle-switch';
+import { GlobalNoticeService } from '../../../core/notices/global-notice.service';
 
 interface ImageItem {
   file: File;
@@ -20,6 +21,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 export class TestimonyForm {
   private readonly testimonies = inject(TestimoniesService);
   private readonly contentSnippets = inject(ContentSnippetsService);
+  private readonly notice = inject(GlobalNoticeService);
 
   readonly linkedPrayerId = input<string | null>(null);
   readonly saved = output<void>();
@@ -89,7 +91,7 @@ export class TestimonyForm {
 
     this.error.set(null);
     this.saving.set(true);
-    const { error } = await this.testimonies.create({
+    const { error, mediaWarning } = await this.testimonies.create({
       body,
       shareToWebsite: this.shareToWebsite(),
       isAnonymous: this.shareToWebsite() ? this.isAnonymous() : false,
@@ -105,6 +107,12 @@ export class TestimonyForm {
 
     for (const item of this.images()) {
       URL.revokeObjectURL(item.url);
+    }
+    // Shown via the app-wide toast, not the local `error` signal -- this
+    // component (and its error banner) unmounts as soon as `saved` is
+    // emitted below, so a warning stored locally would never be seen.
+    if (mediaWarning) {
+      this.notice.show(mediaWarning, 'info');
     }
     this.saved.emit();
   }

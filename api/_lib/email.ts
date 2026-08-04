@@ -124,9 +124,23 @@ export function createCallerClient(token: string): SupabaseClient {
   });
 }
 
-/** Elder emails live in auth.users, not readable via the normal client -- looked up through the Admin API. */
-export async function getElderEmails(admin: SupabaseClient): Promise<string[]> {
-  const { data: elders } = await admin.from('users').select('id').eq('role', 'elder');
+export type NotificationPreferenceColumn =
+  | 'notify_new_members'
+  | 'notify_prayer_requests'
+  | 'notify_new_testimonies'
+  | 'notify_counseling_requests';
+
+/**
+ * Elder emails live in auth.users, not readable via the normal client -- looked
+ * up through the Admin API. Pass a preference column to only include elders who
+ * haven't opted out of that notification category (see admin/notifications).
+ */
+export async function getElderEmails(admin: SupabaseClient, preference?: NotificationPreferenceColumn): Promise<string[]> {
+  let query = admin.from('users').select('id').eq('role', 'elder');
+  if (preference) {
+    query = query.eq(preference, true);
+  }
+  const { data: elders } = await query;
   if (!elders || elders.length === 0) {
     return [];
   }
