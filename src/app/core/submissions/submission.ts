@@ -1,4 +1,6 @@
-export type SubmissionType = 'prayer_request' | 'testimony' | 'counsel_request';
+// Testimonies live in their own table/service now (see core/testimonies) --
+// 'testimony' was a legacy value here, no longer produced or read anywhere.
+export type SubmissionType = 'prayer_request' | 'counsel_request';
 
 export interface AdminSubmission {
   id: string;
@@ -8,6 +10,7 @@ export interface AdminSubmission {
   createdAt: string;
   submittedBy: string | null;
   submittedByAvatar: string | null;
+  mediaUrls: string[];
 }
 
 export interface SubmissionResponse {
@@ -30,4 +33,5 @@ export interface MySubmission {
   isAnonymous: boolean;
   isAnswered: boolean;
   createdAt: string;
+  mediaUrls: string[];
 }

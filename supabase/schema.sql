@@ -44,6 +44,22 @@ create table users (
   cef_sector smallint check (cef_sector between 1 and 5),
   wants_cef boolean not null default false,
 
+  -- Per-elder email notification preferences (meaningless for members, but
+  -- kept on the same row rather than a separate 1:1 table). Default true so
+  -- existing behavior is unchanged until an elder opts out.
+  notify_new_members boolean not null default true,
+  notify_prayer_requests boolean not null default true,
+  notify_new_testimonies boolean not null default true,
+  notify_counseling_requests boolean not null default true,
+
+  -- Per-elder "last viewed" timestamps backing the unread-style badge counts
+  -- on Prayer corner/Counseling/Testimonies -- opening the tab clears the
+  -- badge even without acting on anything. Members' badge is unaffected
+  -- (membership_status = 'pending' is a real pending state, not an unread one).
+  prayer_corner_viewed_at timestamptz,
+  counseling_viewed_at timestamptz,
+  testimonies_viewed_at timestamptz,
+
   created_at timestamptz not null default now()
 );
 
@@ -140,10 +156,25 @@ create table submission_responses (
   created_at timestamptz not null default now()
 );
 
+create table submission_media (
+  id uuid primary key default gen_random_uuid(),
+  submission_id uuid not null references submissions(id) on delete cascade,
+  url text not null,
+  created_at timestamptz not null default now()
+);
+
 -- ─── Testimonies ────────────────────────────────────────────────────
 -- Standalone, or tied to a prayer that was answered. Can carry images and be
--- shared to the public CCSGM website (integration later). When anonymous, the
--- displayed author becomes "A {age} years old {brother/sister} from {church}".
+-- shared to the public CCSGM website. When anonymous, the displayed author on
+-- the website becomes "A {brother/sister} from {church}" (no age, unlike
+-- other in-app anonymous displays).
+--
+-- share_to_website only requests sharing; website_review_status is a second,
+-- elder-only gate inside ccsgm-connect (see "testimonies manageable by
+-- elders" policy below) that must reach 'approved' before
+-- api/publish-testimony-to-website.ts is allowed to push the testimony to
+-- ccsgm-website. The website_sync_* columns track that push independently of
+-- review, so a network failure can be retried without re-approving.
 
 create table testimonies (
   id uuid primary key default gen_random_uuid(),
@@ -152,7 +183,20 @@ create table testimonies (
   body text not null,
   is_anonymous boolean not null default false,
   share_to_website boolean not null default false,
-  created_at timestamptz not null default now()
+  -- Non-null only once share_to_website is true (enforced below).
+  website_review_status text
+    check (website_review_status in ('pending', 'approved', 'rejected')),
+  website_review_note text,
+  website_reviewed_by uuid references users(id) on delete set null,
+  website_reviewed_at timestamptz,
+  website_sync_status text not null default 'not_synced'
+    check (website_sync_status in ('not_synced', 'synced', 'failed')),
+  website_post_id text,
+  website_sync_error text,
+  website_synced_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint testimonies_review_status_requires_share
+    check (not share_to_website or website_review_status is not null)
 );
 
 -- ─── Birthday greetings ─────────────────────────────────────────────
@@ -231,6 +275,7 @@ alter table users enable row level security;
 alter table questions enable row level security;
 alter table question_answers enable row level security;
 alter table submissions enable row level security;
+alter table submission_media enable row level security;
 alter table submission_responses enable row level security;
 alter table testimonies enable row level security;
 alter table testimony_media enable row level security;
@@ -282,6 +327,17 @@ create policy "submissions written by owner" on submissions
 create policy "submissions updated by owner" on submissions
   for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+create policy "submission media readable by owner and elders" on submission_media
+  for select using (
+    is_elder()
+    or exists (select 1 from submissions s where s.id = submission_id and s.user_id = auth.uid())
+  );
+
+create policy "submission media written by owner" on submission_media
+  for insert with check (
+    exists (select 1 from submissions s where s.id = submission_id and s.user_id = auth.uid())
+  );
+
 create policy "responses readable by submitter and elders" on submission_responses
   for select using (
     is_elder()
@@ -310,6 +366,14 @@ create policy "testimonies updated by owner" on testimonies
 
 create policy "testimonies deleted by owner" on testimonies
   for delete using (user_id = auth.uid());
+
+-- Elders can set review/sync columns on ANY testimony, not just their own
+-- (mirrors "users manageable by elders"). This governs the elder's direct
+-- Approve/Reject click from the browser; api/publish-testimony-to-website.ts
+-- writes its own sync-status updates through the service-role admin client,
+-- which bypasses RLS entirely.
+create policy "testimonies manageable by elders" on testimonies
+  for update using (is_elder()) with check (is_elder());
 
 create policy "testimony media readable by owner and elders" on testimony_media
   for select using (

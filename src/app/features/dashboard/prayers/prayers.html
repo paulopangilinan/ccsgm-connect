@@ -6,27 +6,70 @@
   </p>
 }
 
-<div class="mt-4 rounded-3xl border border-brand-100 bg-white/70 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-  <label for="new-prayer" class="sr-only">New prayer request</label>
-  <textarea
-    id="new-prayer"
-    rows="2"
-    placeholder="What can we pray with you for?"
-    [value]="newPrayer()"
-    (input)="newPrayer.set($any($event.target).value)"
-    class="w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
-  ></textarea>
-  <div class="mt-2 flex justify-end">
-    <button
-      type="button"
-      [disabled]="!newPrayer().trim() || submittingPrayer()"
-      (click)="addPrayer()"
-      class="rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
-    >
-      {{ submittingPrayer() ? 'Adding…' : 'Add prayer request' }}
-    </button>
+@if (!showPrayerForm()) {
+  <button
+    type="button"
+    (click)="openPrayerForm()"
+    class="mt-4 rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:scale-[1.02]"
+  >
+    Add a prayer request
+  </button>
+} @else {
+  <div class="mt-4 rounded-3xl border border-brand-100 bg-white/70 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+    <label for="new-prayer" class="sr-only">New prayer request</label>
+    <textarea
+      id="new-prayer"
+      rows="2"
+      placeholder="What can we pray with you for?"
+      [value]="newPrayer()"
+      (input)="newPrayer.set($any($event.target).value)"
+      class="w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/10 dark:bg-white/5"
+    ></textarea>
+
+    <div class="mt-3">
+      <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-brand-200 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5">
+        Add photos
+        <input type="file" accept="image/*" multiple class="sr-only" (change)="onPrayerImagesSelected($event)" />
+      </label>
+
+      @if (newPrayerImages().length > 0) {
+        <ul class="mt-3 flex flex-wrap gap-3">
+          @for (image of newPrayerImages(); track image.url; let i = $index) {
+            <li class="relative">
+              <img [src]="image.url" alt="" class="h-20 w-20 rounded-xl border border-brand-100 object-cover dark:border-white/10" />
+              <button
+                type="button"
+                (click)="removePrayerImage(i)"
+                aria-label="Remove image"
+                class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-red-500 text-xs font-bold text-white shadow"
+              >
+                ×
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="mt-3 flex justify-end gap-2">
+      <button
+        type="button"
+        (click)="closePrayerForm()"
+        class="rounded-2xl border border-brand-200 px-5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        [disabled]="!newPrayer().trim() || submittingPrayer()"
+        (click)="addPrayer()"
+        class="rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+      >
+        {{ submittingPrayer() ? 'Adding…' : 'Add prayer request' }}
+      </button>
+    </div>
   </div>
-</div>
+}
 
 @if (loading()) {
   <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
@@ -45,6 +88,14 @@
           <span class="text-slate-500 dark:text-slate-400">{{ prayer.createdAt | date: 'mediumDate' }}</span>
         </div>
         <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">{{ prayer.body }}</p>
+
+        @if (prayer.mediaUrls.length > 0) {
+          <ul class="mt-3 flex flex-wrap gap-2">
+            @for (url of prayer.mediaUrls; track url) {
+              <li><img [src]="url" alt="" class="h-20 w-20 rounded-xl border border-brand-100 object-cover dark:border-white/10" /></li>
+            }
+          </ul>
+        }
 
         <div class="mt-4 border-t border-brand-100 pt-4 dark:border-white/10">
           @if (responsesFor(prayer.id).length > 0) {

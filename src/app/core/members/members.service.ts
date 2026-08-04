@@ -54,6 +54,19 @@ export class MembersService {
     return { error: error?.message ?? null };
   }
 
+  // Promotion only -- there's no "demote to member" path here. Guarded
+  // server-side by the "users manageable by elders" RLS policy and the
+  // protect_user_role trigger (only elders may change any role, including
+  // their own -- this call only ever runs as an elder, since admin-members
+  // is behind elderGuard).
+  async makeElder(userId: string): Promise<ActionResult> {
+    const { error } = await this.supabase
+      .from('users')
+      .update({ role: 'elder', membership_status: 'approved' })
+      .eq('id', userId);
+    return { error: error?.message ?? null };
+  }
+
   async deleteMember(memberId: string): Promise<ActionResult> {
     const token = this.session.session()?.access_token;
     if (!token) {

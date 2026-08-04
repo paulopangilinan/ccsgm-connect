@@ -1,5 +1,5 @@
-<section class="mx-auto max-w-2xl px-6 py-16">
-  <h1 class="text-2xl font-extrabold">Welcome{{ session.profile()?.name ? ', ' + session.profile()?.name : '' }}</h1>
+<section class="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-16">
+  <h1 class="text-xl font-extrabold sm:text-2xl">Welcome{{ session.profile()?.name ? ', ' + session.profile()?.name : '' }}</h1>
 
   @if (session.profile()?.membershipStatus === 'pending') {
     <p class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
@@ -18,7 +18,10 @@
   }
 
   <!-- Tabs -->
-  <nav class="mt-8 flex gap-1 border-b border-brand-100 dark:border-white/10" aria-label="Member sections">
+  <nav
+    class="-mx-4 mt-8 flex gap-1 overflow-x-auto whitespace-nowrap border-b border-brand-100 px-4 pb-px sm:mx-0 sm:px-0 dark:border-white/10"
+    aria-label="Member sections"
+  >
     <a
       routerLink="profile"
       routerLinkActive
@@ -53,6 +56,22 @@
         Prayer corner
       </a>
       <a
+        routerLink="testimonies"
+        routerLinkActive
+        #testimoniesTab="routerLinkActive"
+        class="border-b-2 px-4 py-2 text-sm transition"
+        [class.border-brand-600]="testimoniesTab.isActive"
+        [class.font-bold]="testimoniesTab.isActive"
+        [class.text-brand-700]="testimoniesTab.isActive"
+        [class.dark:text-brand-300]="testimoniesTab.isActive"
+        [class.border-transparent]="!testimoniesTab.isActive"
+        [class.font-semibold]="!testimoniesTab.isActive"
+        [class.text-slate-500]="!testimoniesTab.isActive"
+        [class.dark:text-slate-400]="!testimoniesTab.isActive"
+      >
+        Testimonies
+      </a>
+      <a
         routerLink="counseling"
         routerLinkActive
         #counselingTab="routerLinkActive"
@@ -79,6 +98,17 @@
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
         Prayer corner
+      </span>
+      <span
+        class="flex cursor-not-allowed items-center gap-1.5 border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-400 dark:text-slate-500"
+        title="Complete your profile to unlock this"
+        aria-disabled="true"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
+          <rect x="3" y="11" width="18" height="11" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        Testimonies
       </span>
       <span
         class="flex cursor-not-allowed items-center gap-1.5 border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-400 dark:text-slate-500"

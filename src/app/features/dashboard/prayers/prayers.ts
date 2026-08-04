@@ -7,6 +7,15 @@ import { TestimoniesService } from '../../../core/testimonies/testimonies.servic
 import { Testimony } from '../../../core/testimonies/testimony';
 import { TestimonyForm } from '../testimony-form/testimony-form';
 import { visibleResponses } from '../../../core/util/thread';
+import { GlobalNoticeService } from '../../../core/notices/global-notice.service';
+
+interface ImageItem {
+  file: File;
+  url: string;
+}
+
+const MAX_IMAGES = 6;
+const MAX_BYTES = 5 * 1024 * 1024;
 
 @Component({
   selector: 'app-prayers',
@@ -17,6 +26,7 @@ import { visibleResponses } from '../../../core/util/thread';
 export class Prayers {
   private readonly submissionsService = inject(SubmissionsService);
   private readonly testimoniesService = inject(TestimoniesService);
+  private readonly notice = inject(GlobalNoticeService);
   protected readonly session = inject(SessionService);
 
   protected readonly loading = signal(true);
@@ -25,7 +35,9 @@ export class Prayers {
   protected readonly testimonies = signal<Testimony[]>([]);
   protected readonly expandedThreads = signal<Set<string>>(new Set());
 
+  protected readonly showPrayerForm = signal(false);
   protected readonly newPrayer = signal('');
+  protected readonly newPrayerImages = signal<ImageItem[]>([]);
   protected readonly submittingPrayer = signal(false);
   protected readonly prayerError = signal<string | null>(null);
 
@@ -118,6 +130,57 @@ export class Prayers {
     return this.testimonies().find((t) => t.linkedPrayerId === prayerId);
   }
 
+  protected openPrayerForm(): void {
+    this.showPrayerForm.set(true);
+  }
+
+  protected closePrayerForm(): void {
+    this.showPrayerForm.set(false);
+    this.newPrayer.set('');
+    this.prayerError.set(null);
+    for (const item of this.newPrayerImages()) {
+      URL.revokeObjectURL(item.url);
+    }
+    this.newPrayerImages.set([]);
+  }
+
+  protected onPrayerImagesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    this.prayerError.set(null);
+
+    const current = this.newPrayerImages();
+    const additions: ImageItem[] = [];
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        this.prayerError.set('Only image files can be attached.');
+        continue;
+      }
+      if (file.size > MAX_BYTES) {
+        this.prayerError.set('Each image must be 5 MB or smaller.');
+        continue;
+      }
+      if (current.length + additions.length >= MAX_IMAGES) {
+        this.prayerError.set(`You can attach up to ${MAX_IMAGES} images.`);
+        break;
+      }
+      additions.push({ file, url: URL.createObjectURL(file) });
+    }
+
+    this.newPrayerImages.set([...current, ...additions]);
+  }
+
+  protected removePrayerImage(index: number): void {
+    const current = this.newPrayerImages();
+    const [removed] = current.splice(index, 1);
+    if (removed) {
+      URL.revokeObjectURL(removed.url);
+    }
+    this.newPrayerImages.set([...current]);
+  }
+
   protected async addPrayer(): Promise<void> {
     const body = this.newPrayer().trim();
     if (!body || this.submittingPrayer()) {
@@ -125,13 +188,22 @@ export class Prayers {
     }
     this.prayerError.set(null);
     this.submittingPrayer.set(true);
-    const { error } = await this.submissionsService.create('prayer_request', body, false);
+    const images = this.newPrayerImages().map((item) => item.file);
+    const { error, mediaWarning } = await this.submissionsService.create('prayer_request', body, false, images);
     this.submittingPrayer.set(false);
     if (error) {
       this.prayerError.set(error);
       return;
     }
+    for (const item of this.newPrayerImages()) {
+      URL.revokeObjectURL(item.url);
+    }
     this.newPrayer.set('');
+    this.newPrayerImages.set([]);
+    this.showPrayerForm.set(false);
+    if (mediaWarning) {
+      this.notice.show(mediaWarning, 'info');
+    }
     await this.load();
   }
 

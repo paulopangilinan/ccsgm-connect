@@ -1,9 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createAdminClient, createCallerClient, getAppOrigin, getElderEmails, renderEmailHtml, resolveIsDarkForEmail, sendEmail } from './_lib/email.ts';
+import { createAdminClient, createCallerClient, getAppOrigin, getElderEmails, renderEmailHtml, resolveIsDarkForEmail, sendEmail, type NotificationPreferenceColumn } from './_lib/email.ts';
 
 const TYPE_LABELS: Record<string, string> = {
   prayer_request: 'prayer request',
   counsel_request: 'counseling request',
+};
+
+// Prayer requests and counseling requests now live under separate admin
+// tabs/routes (see app.routes.ts) -- link each notification to the tab that
+// will actually show it.
+const ADMIN_PATH_BY_TYPE: Record<string, string> = {
+  prayer_request: 'submissions',
+  counsel_request: 'counseling',
+};
+
+const PREFERENCE_BY_TYPE: Record<string, NotificationPreferenceColumn> = {
+  prayer_request: 'notify_prayer_requests',
+  counsel_request: 'notify_counseling_requests',
 };
 
 // Emails all elders when a member submits a prayer or counseling request.
@@ -49,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .maybeSingle();
 
   const admin = createAdminClient();
-  const elderEmails = await getElderEmails(admin);
+  const elderEmails = await getElderEmails(admin, PREFERENCE_BY_TYPE[submission.type]);
   if (elderEmails.length === 0) {
     return res.status(200).json({ sent: false, reason: 'no-elders' });
   }
@@ -64,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     heading: `New ${typeLabel}`,
     paragraphs: [`${who} submitted a new ${typeLabel}.`, 'Open the admin panel to read and respond.'],
     ctaLabel: 'Open submissions',
-    ctaUrl: `${origin}/admin/submissions`,
+    ctaUrl: `${origin}/admin/${ADMIN_PATH_BY_TYPE[submission.type] ?? 'submissions'}`,
   });
 
   const { error } = await sendEmail(elderEmails, `New ${typeLabel} — CCSGM Connect`, html);

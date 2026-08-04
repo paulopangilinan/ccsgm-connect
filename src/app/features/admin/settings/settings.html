@@ -1,0 +1,38 @@
+<p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Site configuration and maintenance.</p>
+
+<nav class="mt-4 flex gap-2 border-b border-brand-100 dark:border-white/10" aria-label="Settings sections">
+  <a
+    routerLink="questions"
+    routerLinkActive
+    #questionsTab="routerLinkActive"
+    class="border-b-2 px-4 py-2 text-sm transition"
+    [class.border-brand-600]="questionsTab.isActive"
+    [class.font-bold]="questionsTab.isActive"
+    [class.text-brand-700]="questionsTab.isActive"
+    [class.dark:text-brand-300]="questionsTab.isActive"
+    [class.border-transparent]="!questionsTab.isActive"
+    [class.font-semibold]="!questionsTab.isActive"
+    [class.text-slate-500]="!questionsTab.isActive"
+    [class.dark:text-slate-400]="!questionsTab.isActive"
+  >
+    Questions
+  </a>
+  <a
+    routerLink="notifications"
+    routerLinkActive
+    #notificationsTab="routerLinkActive"
+    class="border-b-2 px-4 py-2 text-sm transition"
+    [class.border-brand-600]="notificationsTab.isActive"
+    [class.font-bold]="notificationsTab.isActive"
+    [class.text-brand-700]="notificationsTab.isActive"
+    [class.dark:text-brand-300]="notificationsTab.isActive"
+    [class.border-transparent]="!notificationsTab.isActive"
+    [class.font-semibold]="!notificationsTab.isActive"
+    [class.text-slate-500]="!notificationsTab.isActive"
+    [class.dark:text-slate-400]="!notificationsTab.isActive"
+  >
+    Notifications
+  </a>
+</nav>
+
+<router-outlet />

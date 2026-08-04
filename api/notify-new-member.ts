@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const admin = createAdminClient();
-  const elderEmails = await getElderEmails(admin);
+  const elderEmails = await getElderEmails(admin, 'notify_new_members');
   if (elderEmails.length === 0) {
     return res.status(200).json({ sent: false, reason: 'no-elders' });
   }

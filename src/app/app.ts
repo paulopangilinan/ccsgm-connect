@@ -23,9 +23,23 @@ export class App {
   private readonly idleTimeout = inject(IdleTimeoutService);
 
   protected readonly uploadingAvatar = signal(false);
+  protected readonly accountMenuOpen = signal(false);
   protected readonly currentYear = new Date().getFullYear();
 
+  protected toggleAccountMenu(): void {
+    this.accountMenuOpen.update((open) => !open);
+  }
+
+  protected openAccountMenu(): void {
+    this.accountMenuOpen.set(true);
+  }
+
+  protected closeAccountMenu(): void {
+    this.accountMenuOpen.set(false);
+  }
+
   protected async signOut(): Promise<void> {
+    this.closeAccountMenu();
     await this.session.signOut();
     await this.router.navigateByUrl('/');
   }

@@ -1,0 +1,61 @@
+@if (errorMessage()) {
+  <p role="alert" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+    {{ errorMessage() }}
+  </p>
+}
+
+<p class="mt-4 text-sm text-slate-600 dark:text-slate-300">
+  Choose which emails you personally receive as an elder. This only affects your own inbox — not what other elders
+  receive, or what shows up in the app itself.
+</p>
+
+<div class="mt-4 divide-y divide-brand-100 rounded-3xl border border-brand-100 bg-white/70 shadow-sm backdrop-blur dark:divide-white/10 dark:border-white/10 dark:bg-white/5">
+  <div class="flex items-center justify-between gap-4 p-5">
+    <div>
+      <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">New members</p>
+      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">A member signs up and is awaiting approval.</p>
+    </div>
+    <app-toggle-switch
+      [checked]="preferences().notifyNewMembers"
+      (checkedChange)="setPreference('notifyNewMembers', $event)"
+      ariaLabel="Email me about new members"
+    />
+  </div>
+  <div class="flex items-center justify-between gap-4 p-5">
+    <div>
+      <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Prayer requests</p>
+      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">A member submits a new prayer request.</p>
+    </div>
+    <app-toggle-switch
+      [checked]="preferences().notifyPrayerRequests"
+      (checkedChange)="setPreference('notifyPrayerRequests', $event)"
+      ariaLabel="Email me about prayer requests"
+    />
+  </div>
+  <div class="flex items-center justify-between gap-4 p-5">
+    <div>
+      <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">New testimonies</p>
+      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">A member shares a testimony for the website.</p>
+    </div>
+    <app-toggle-switch
+      [checked]="preferences().notifyNewTestimonies"
+      (checkedChange)="setPreference('notifyNewTestimonies', $event)"
+      ariaLabel="Email me about new testimonies"
+    />
+  </div>
+  <div class="flex items-center justify-between gap-4 p-5">
+    <div>
+      <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Counseling requests</p>
+      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">A member submits a new counseling request.</p>
+    </div>
+    <app-toggle-switch
+      [checked]="preferences().notifyCounselingRequests"
+      (checkedChange)="setPreference('notifyCounselingRequests', $event)"
+      ariaLabel="Email me about counseling requests"
+    />
+  </div>
+</div>
+
+@if (savedMessage()) {
+  <p class="mt-3 text-xs text-emerald-600 dark:text-emerald-400">{{ savedMessage() }}</p>
+}
